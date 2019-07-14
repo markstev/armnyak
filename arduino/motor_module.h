@@ -2,10 +2,13 @@
 #define NEBREE8_ARDUINO_MOTOR_MODULE_H_
 
 #include <string.h>
+#include <stdio.h>
+#include <pb_decode.h>
 
 #include "../arduinoio/lib/uc_module.h"
 #include "../arduinoio/lib/message.h"
 #include "../arduinoio/lib/timed_callback.h"
+#include "motor_command.pb.h"
 
 namespace nebree8 {
 
@@ -90,6 +93,13 @@ class MotorModule : public arduinoio::UCModule {
   virtual bool AcceptMessage(const arduinoio::Message &message) {
     int length;
     const char* command = (const char*) message.command(&length);
+    const uint8_t* buffer = (const uint8_t*) command;
+    MotorInitProto command_proto = MotorInitProto_init_zero;
+    pb_istream_t stream = pb_istream_from_buffer(buffer, length);
+    const bool status = pb_decode(&stream, MotorInitProto_fields, &command_proto);
+    if (!status) {
+      return false;
+    }
     if (length > MOVE_LENGTH &&
         (strncmp(command, MOVE, MOVE_LENGTH) == 0)) {
       // dir pin (char)
