@@ -3,22 +3,25 @@ syntax = "proto2";
 //package armnyak;
 
 message MotorInitProto {
-  optional int32 address = 1;
-  optional int32 enable_pin = 2;
-  optional int32 dir_pin = 3;
-  optional int32 step_pin = 4;
-  optional int32 ms0_pin = 5;
-  optional int32 ms1_pin = 6;
-  optional int32 ms2_pin = 7;
+  // Required?!?! Why?
+  // It turns out that nanopb ignores optional fields, hence the deviation from
+  // Google norms.
+  required int32 address = 1;
+  required int32 enable_pin = 2;
+  required int32 dir_pin = 3;
+  required int32 step_pin = 4;
+  required int32 ms0_pin = 5;
+  required int32 ms1_pin = 6;
+  required int32 ms2_pin = 7;
 }
 
 message MotorMoveProto {
-  optional int32 address = 1;
-  optional bool direction = 2;
+  required int32 address = 1;
+  required bool direction = 2;
   // Speeds are between 0.0 and 1.0.
-  optional float max_speed = 3;
+  required float max_speed = 3;
   // We start at this min speed and will try to decelerate back to it.
-  optional float min_speed = 4;
-  optional uint32 steps = 5;
-  optional bool disable_after_moving = 6;
+  required float min_speed = 4;
+  required uint32 steps = 5;
+  required bool disable_after_moving = 6;
 }

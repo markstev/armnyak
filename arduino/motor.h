@@ -49,6 +49,7 @@ class Motor {
     pinMode(init_proto_.ms0_pin, OUTPUT);
     pinMode(init_proto_.ms1_pin, OUTPUT);
     pinMode(init_proto_.ms2_pin, OUTPUT);
+    digitalWrite(init_proto_.enable_pin, HIGH);
   }
 
   uint32_t address() const {
