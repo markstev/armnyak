@@ -23,8 +23,9 @@ set(CMAKE_MODULE_PATH /home/pi/armnyak/nanopb/extra)
 #set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/../nanopb/extra)
 find_package(Nanopb REQUIRED)
 include_directories(${NANOPB_INCLUDE_DIRS})
-nanopb_generate_cpp(PROTO_SRCS PROTO_HDRS RELPATH proto
-	proto/motor_command.proto)
+#nanopb_generate_cpp(PROTO_SRCS PROTO_HDRS RELPATH proto
+nanopb_generate_cpp(PROTO_SRCS PROTO_HDRS 
+  ${CMAKE_SOURCE_DIR}/proto/motor_command.proto)
 message(${PROTO_SRCS})
 message(${PROTO_HDRS})
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
@@ -38,6 +39,7 @@ set_source_files_properties(${PROTO_SRCS} ${PROTO_HDRS}
 set(${FIRMWARE_NAME}_BOARD uno)               # Arduino Target board
 #SET(CMCU "-mmcu=atmega2560")
 set(${FIRMWARE_NAME}_SRCS  motor_controller.cc ${PROTO_SRCS})
+message("SRCS ARE " ${motor_controller_SRCS})
 set(${FIRMWARE_NAME}_HDRS   ${PROTO_HDRS})
 
 set(${FIRMWARE_NAME}_PORT /dev/ttyACM0)            # Serial upload port

@@ -20,16 +20,19 @@ class Motor(object):
   def Move(self, motor_move_proto):
     self.SendProto("MUP", motor_move_proto)
 
-  def SetMicrostepDivision(self, steps):
+  def Configure(self, microsteps, max_steps, min_steps, set_zero=False):
     config_proto = MotorConfigProto()
     config_proto.address = self.address
     for i in range(5):
       steps_test = 1 << i
-      if steps_test >= steps:
+      if steps_test >= microsteps:
         config_proto.ms0 = i & 0x01
         config_proto.ms1 = i & 0x02
         config_proto.ms2 = i & 0x04
         break
+    config_proto.min_steps = min_steps
+    config_proto.max_steps = max_steps
+    config_proto.zero = set_zero
     self.SendProto("MCONF", config_proto)
 
   def SendProto(self, name, proto):

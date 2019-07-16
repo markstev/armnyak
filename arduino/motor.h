@@ -9,8 +9,8 @@ namespace {
 const double kSpeedUpFactor = 0.996;
 const double kSlowDownFactor = 1.004;
 
-const int kPhysicalMinWait = 200;
-const int kPhysicalMaxWait = 2000;
+const uint32_t kPhysicalMinWait = 200;
+const uint32_t kPhysicalMaxWait = 2000;
 
 bool TimeToSlowDown(const int steps_remaining, const int current_wait, const int max_wait) {
   const int kSlowDownIncrement = 100;
@@ -27,8 +27,8 @@ bool TimeToSlowDown(const int steps_remaining, const int current_wait, const int
   return true;
 }
 
-int SpeedToWaitTime(const float speed) {
-  const int range = kPhysicalMaxWait - kPhysicalMinWait;
+uint32_t SpeedToWaitTime(const float speed) {
+  const uint32_t range = kPhysicalMaxWait - kPhysicalMinWait;
   return range * (1.0 - speed) + kPhysicalMinWait;
 }
 
@@ -50,6 +50,10 @@ class Motor {
     pinMode(init_proto_.ms1_pin, OUTPUT);
     pinMode(init_proto_.ms2_pin, OUTPUT);
     digitalWrite(init_proto_.enable_pin, HIGH);
+    current_absolute_steps_ = 0;
+    // Arbitrary small number to prevent accidents
+    min_steps_ = -200;
+    max_steps_ = 200;
   }
 
   uint32_t address() const {
@@ -57,11 +61,17 @@ class Motor {
   }
 
   void Update(const MotorMoveProto &move_proto) {
-    digitalWrite(init_proto_.dir_pin, move_proto.direction);
     max_wait_ = SpeedToWaitTime(move_proto.min_speed);
     min_wait_ = SpeedToWaitTime(move_proto.max_speed);
     current_wait_ = max_wait_;
-    remaining_steps_ = move_proto.steps;
+    if (move_proto.use_absolute_steps) {
+      direction_ = move_proto.absolute_steps > current_absolute_steps_;
+      remaining_steps_ = abs(move_proto.absolute_steps - current_absolute_steps_);
+    } else {
+      direction_ = move_proto.direction;
+      remaining_steps_ = move_proto.steps;
+    }
+    digitalWrite(init_proto_.dir_pin, direction_);
     disable_after_moving_ = move_proto.disable_after_moving;
     next_step_in_usec_ = 0;
     digitalWrite(init_proto_.enable_pin, LOW);
@@ -80,6 +90,13 @@ class Motor {
   }
 
   void Step() {
+    if (direction_) {
+      if (current_absolute_steps_ >= max_steps_) return;
+      ++current_absolute_steps_;
+    } else {
+      if (current_absolute_steps_ <= min_steps_) return;
+      --current_absolute_steps_;
+    }
     pulse_state_ = !pulse_state_;
     digitalWrite(init_proto_.step_pin, pulse_state_ ? HIGH : LOW);
   }
@@ -97,6 +114,11 @@ class Motor {
     digitalWrite(init_proto_.ms0_pin, config.ms0);
     digitalWrite(init_proto_.ms1_pin, config.ms1);
     digitalWrite(init_proto_.ms2_pin, config.ms2);
+    if (config.zero) {
+      current_absolute_steps_ = 0;
+    }
+    min_steps_ = config.min_steps;
+    max_steps_ = config.max_steps;
   }
 
  private:
@@ -104,12 +126,16 @@ class Motor {
 
   // Stepping state
   bool pulse_state_;
+  bool direction_;
   uint32_t current_wait_;
   uint32_t max_wait_;
   uint32_t min_wait_;
   unsigned long next_step_in_usec_;
   uint32_t remaining_steps_;
   bool disable_after_moving_;
+  int32_t max_steps_;
+  int32_t min_steps_;
+  int32_t current_absolute_steps_;
 };
 
 }  // namespace armnyak

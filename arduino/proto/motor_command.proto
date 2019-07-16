@@ -24,6 +24,9 @@ message MotorMoveProto {
   required float min_speed = 4;
   required uint32 steps = 5;
   required bool disable_after_moving = 6;
+  // If set, used instead of steps.
+  required bool use_absolute_steps = 7;
+  required int32 absolute_steps = 8;
 }
 
 message MotorConfigProto {
@@ -31,4 +34,7 @@ message MotorConfigProto {
   required bool ms0 = 2;
   required bool ms1 = 3;
   required bool ms2 = 4;
+  required bool zero = 5;
+  required int32 min_steps = 6;
+  required int32 max_steps = 7;
 }
