@@ -6,30 +6,35 @@
 
 namespace armnyak {
 namespace {
-const double kSpeedUpFactor = 0.996;
-const double kSlowDownFactor = 1.004;
 
-const uint32_t kPhysicalMinWait = 100;
-const uint32_t kPhysicalMaxWait = 2000;
+const float kAcceleration = 1500.0;  // steps / s^2
+const float kSlowDownTime = 1.0;  // seconds
 
-bool TimeToSlowDown(const int steps_remaining, const int current_wait, const int max_wait) {
-  const int kSlowDownIncrement = 100;
-  const double kSlowDownFactorIncrement = 1.49063488565;
-  const int steps_increment = steps_remaining / kSlowDownIncrement;
-  double new_wait = current_wait;
-  for (int i = 0; i < steps_increment; ++i) {
-    new_wait *= kSlowDownFactorIncrement;
-    if (new_wait > max_wait) {
-      // We can wait and still slow down in time.
-      return false;
-    }
-  }
-  return true;
+float SpeedToWaitTimeSeconds(const float steps_per_second) {
+  return 1.0 / (steps_per_second + 1);
 }
 
-uint32_t SpeedToWaitTime(const float speed) {
-  const uint32_t range = kPhysicalMaxWait - kPhysicalMinWait;
-  return range * (1.0 - speed) + kPhysicalMinWait;
+uint32_t SecondsToMicros(const float wait_seconds) {
+  return static_cast<uint32_t>(1000000.0 * wait_seconds);
+}
+
+void UpdateSpeed(const float min_speed, const float max_speed, const float current_speed,
+    const float acceleration, const uint32_t steps_remaining, float *speed, uint32_t *wait_micros) {
+
+  const float cooldown_steps =
+      current_speed * kSlowDownTime - 0.5 * acceleration * kSlowDownTime * kSlowDownTime;
+  if (current_speed > 1.1 * max_speed || cooldown_steps > steps_remaining) {
+    if (current_speed > min_speed) {
+      *speed = current_speed - acceleration * SpeedToWaitTimeSeconds(current_speed);
+      *wait_micros = SecondsToMicros(SpeedToWaitTimeSeconds(*speed));
+    }
+  } else if (current_speed < max_speed) {
+    const float wait_seconds =
+        (-current_speed + sqrt(current_speed * current_speed + 2 * acceleration)) /
+        acceleration;
+    *speed = current_speed + acceleration * wait_seconds;
+    *wait_micros = SecondsToMicros(wait_seconds);
+  }
 }
 
 }  // namespace
@@ -37,8 +42,10 @@ uint32_t SpeedToWaitTime(const float speed) {
 class Motor {
  public:
   Motor() {
-   remaining_steps_ = 0;
-   pulse_state_ = false;
+    remaining_steps_ = 0;
+    pulse_state_ = false;
+    current_absolute_steps_ = 0;
+    current_speed_steps_per_second_ = 0;
   }
   
   void Init(const MotorInitProto &init_proto) {
@@ -61,16 +68,22 @@ class Motor {
   }
 
   void Update(const MotorMoveProto &move_proto) {
-    max_wait_ = SpeedToWaitTime(move_proto.min_speed);
-    min_wait_ = SpeedToWaitTime(move_proto.max_speed);
-    current_wait_ = max_wait_;
+    min_speed_ = move_proto.min_speed;
+    max_speed_ = move_proto.max_speed;
     if (move_proto.use_absolute_steps) {
-      direction_ = move_proto.absolute_steps > current_absolute_steps_;
-      remaining_steps_ = abs(move_proto.absolute_steps - current_absolute_steps_);
+      const int32_t absolute_steps_target = max(min_steps_, min(max_steps_, move_proto.absolute_steps));
+      direction_ = absolute_steps_target > current_absolute_steps_;
+      remaining_steps_ = abs(absolute_steps_target - current_absolute_steps_);
     } else {
       direction_ = move_proto.direction;
-      remaining_steps_ = move_proto.steps;
+      if (direction_) {
+        remaining_steps_ = min(move_proto.steps, max_steps_ - current_absolute_steps_);
+      } else {
+        remaining_steps_ = min(move_proto.steps, -min_steps_ + current_absolute_steps_);
+      }
     }
+    UpdateSpeed(min_speed_, max_speed_, current_speed_steps_per_second_, kAcceleration,
+        remaining_steps_, &current_speed_steps_per_second_, &current_wait_);
     digitalWrite(init_proto_.dir_pin, direction_);
     disable_after_moving_ = move_proto.disable_after_moving;
     next_step_in_usec_ = 0;
@@ -82,8 +95,10 @@ class Motor {
     const unsigned long now = micros();
     if (now < next_step_in_usec_) return;
     const bool can_update = Step();
-    UpdateWait(now);
     --remaining_steps_;
+    UpdateSpeed(min_speed_, max_speed_, current_speed_steps_per_second_, kAcceleration,
+        remaining_steps_, &current_speed_steps_per_second_, &current_wait_);
+    next_step_in_usec_ = now + current_wait_;
     if (!can_update) {
       remaining_steps_ = 0;
     }
@@ -95,6 +110,9 @@ class Motor {
       digitalWrite(init_proto_.enable_pin, HIGH);
     } else {
       digitalWrite(init_proto_.enable_pin, LOW);
+    }
+    if (remaining_steps_ == 0) {
+      current_speed_steps_per_second_ = 0.0;
     }
   }
 
@@ -109,15 +127,6 @@ class Motor {
     pulse_state_ = !pulse_state_;
     digitalWrite(init_proto_.step_pin, pulse_state_ ? HIGH : LOW);
     return true;
-  }
-
-  void UpdateWait(unsigned long now) {
-    if (TimeToSlowDown(remaining_steps_, current_wait_, max_wait_)) {
-      current_wait_ *= kSlowDownFactor;
-    } else if (current_wait_ > min_wait_) {
-      current_wait_ *= kSpeedUpFactor;
-    }
-    next_step_in_usec_ = now + current_wait_;
   }
 
   void Config(const MotorConfigProto &config) {
@@ -137,9 +146,12 @@ class Motor {
   // Stepping state
   bool pulse_state_;
   bool direction_;
+
+  float current_speed_steps_per_second_;
+  float min_speed_;
+  float max_speed_;
   uint32_t current_wait_;
-  uint32_t max_wait_;
-  uint32_t min_wait_;
+
   unsigned long next_step_in_usec_;
   uint32_t remaining_steps_;
   bool disable_after_moving_;

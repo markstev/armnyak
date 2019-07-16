@@ -77,25 +77,19 @@ def calibrate_wrist(bank):
 #calibrate_base(bank)
 
 #bank.wrist_motor.MoveRelative(0.5)
-bank.wrist_motor.MoveAbsolute(0.6, math.pi / 4)
-time.sleep(3)
-bank.wrist_motor.MoveAbsolute(0.6, -math.pi / 4)
+#   bank.wrist_motor.MoveAbsolute(0.6, math.pi / 4)
+#   time.sleep(3)
+#   bank.wrist_motor.MoveAbsolute(0.6, -math.pi / 4)
 #bank.wrist_motor.MoveRelative(-0.5)
 
-### for i in range(2):
-###   forward = not forward
-###   steps = 400
-###   bank.base_motor.SetMicrostepDivision(1)
-###   move_proto = MotorMoveProto()
-###   move_proto.address = 0
-###   move_proto.direction = forward
-###   move_proto.max_speed = 0.5
-###   move_proto.min_speed = 0.0
-###   move_proto.steps = steps
-###   move_proto.disable_after_moving = True
-###   bank.base_motor.Move(move_proto)
-###   #time.sleep(1)
-###   bank.wrist_motor.SetMicrostepDivision(1)
+forward = 1.0
+for i in range(6, 10):
+  forward *= -1
+  steps = 4000
+  bank.base_motor.Configure(microsteps=1, max_steps=6000, min_steps=-6000)
+  #bank.base_motor.MoveRelative(forward * 0.1 * i)
+  bank.base_motor.MoveAbsolute(1.0, forward)
+  time.sleep(5)
 
 ###   move_proto = MotorMoveProto()
 ###   move_proto.address = 1
