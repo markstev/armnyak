@@ -4,6 +4,7 @@ from motor2 import MotorBankBase
 from protoc.motor_command_pb2 import MotorMoveProto
 import time
 import logging
+import math
 
 stepper_dir_pin = 8
 stepper_pulse_pin = 9
@@ -73,7 +74,14 @@ def calibrate_wrist(bank):
     bank.wrist_motor.Move(move_proto)
 
 #calibrate_wrist(bank)
-calibrate_base(bank)
+#calibrate_base(bank)
+
+#bank.wrist_motor.MoveRelative(0.5)
+bank.wrist_motor.MoveAbsolute(0.6, math.pi / 4)
+time.sleep(3)
+bank.wrist_motor.MoveAbsolute(0.6, -math.pi / 4)
+#bank.wrist_motor.MoveRelative(-0.5)
+
 ### for i in range(2):
 ###   forward = not forward
 ###   steps = 400

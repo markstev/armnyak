@@ -2,6 +2,7 @@ from arduinoio import serial_control
 from protoc.motor_command_pb2 import MotorInitProto
 from protoc.motor_command_pb2 import MotorMoveProto
 from protoc.motor_command_pb2 import MotorConfigProto
+import math
 
 class MotorBank(object):
   def __init__(self):
@@ -16,9 +17,43 @@ class Motor(object):
     init_proto = self.InitProto()
     self.address = init_proto.address
     self.SendProto("MINIT", init_proto)
+    self.disable_after_moving = True
 
   def Move(self, motor_move_proto):
     self.SendProto("MUP", motor_move_proto)
+
+  def SetDisableAfterMoving(self, disable_after_moving):
+    self.disable_after_moving = disable_after_moving
+
+  def CreateMoveProto(self):
+    move_proto = MotorMoveProto()
+    move_proto.address = self.address
+    move_proto.disable_after_moving = self.disable_after_moving
+    #Should override one of these sections
+    move_proto.direction = True
+    move_proto.max_speed = 0.1
+    move_proto.min_speed = 0.0
+    move_proto.steps = 1
+    move_proto.use_absolute_steps = False
+    move_proto.absolute_steps = 0
+    return move_proto
+
+  def MoveRelative(self, speed):
+    """Speed should range from -1.0 to 1.0"""
+    move_proto = self.CreateMoveProto()
+    move_proto.max_speed = abs(speed)
+    move_proto.direction = speed > 0.0
+    move_proto.steps = self.StepsPerSecond()
+    move_proto.use_absolute_steps = False
+    return self.Move(move_proto)
+
+  def MoveAbsolute(self, speed, world_radians):
+    """Speed should range from -1.0 to 1.0"""
+    move_proto = self.CreateMoveProto()
+    move_proto.max_speed = abs(speed)
+    move_proto.absolute_steps = int(world_radians * self.StepsPerRadian())
+    move_proto.use_absolute_steps = True
+    return self.Move(move_proto)
 
   def Configure(self, microsteps, max_steps, min_steps, set_zero=False):
     config_proto = MotorConfigProto()
@@ -51,7 +86,7 @@ class Motor(object):
 
 
 class BaseMotor(Motor):
- def InitProto(self):
+  def InitProto(self):
     motor_init = MotorInitProto()
     motor_init.address = 0
     motor_init.enable_pin = 13
@@ -62,9 +97,18 @@ class BaseMotor(Motor):
     motor_init.ms2_pin = 10
     return motor_init
 
+  def StepsPerSecond(self):
+    return 20000 / 6
+
+  def AngularRotationPerSecond(self):
+    return math.pi / 3.0
+
+  def StepsPerRadian(self):
+    return 9000 / math.pi
+
 
 class WristMotor(Motor):
- def InitProto(self):
+  def InitProto(self):
     motor_init = MotorInitProto()
     motor_init.address = 1
     motor_init.enable_pin = 7
@@ -74,6 +118,15 @@ class WristMotor(Motor):
     motor_init.ms1_pin = 5
     motor_init.ms2_pin = 4
     return motor_init
+
+  def StepsPerSecond(self):
+    return 2600
+
+  def AngularRotationPerSecond(self):
+    return math.pi
+
+  def StepsPerRadian(self):
+    return 2600 / math.pi
 
 
 class MotorBankBase(MotorBank):
