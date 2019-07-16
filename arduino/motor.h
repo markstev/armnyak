@@ -93,6 +93,12 @@ class Motor {
     next_step_in_usec_ = now + current_wait_;
   }
 
+  void Config(const MotorConfigProto &config) {
+    digitalWrite(init_proto_.ms0_pin, config.ms0);
+    digitalWrite(init_proto_.ms1_pin, config.ms1);
+    digitalWrite(init_proto_.ms2_pin, config.ms2);
+  }
+
  private:
   MotorInitProto init_proto_;
 

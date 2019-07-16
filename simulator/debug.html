@@ -1,0 +1,99 @@
+<html>
+	<head>
+		<title>My first three.js app</title>
+		<style>
+			body { margin: 0; }
+			canvas { width: 100%; height: 100% }
+		</style>
+	</head>
+	<body>
+    <h1>Arm Simulator</h1>
+    <div id="debug_string">Hello, world</div>
+    <button onclick="fetch('/reset')">Reset</button>
+    <button onclick="fetch('/replay')">Replay</button>
+		<script src="three.js"></script>
+		<script src="OrbitControls.js"></script>
+		<script>
+			var scene = new THREE.Scene();
+			var camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 1000 );
+
+			var renderer = new THREE.WebGLRenderer();
+			renderer.setSize( window.innerWidth, window.innerHeight );
+			document.body.appendChild( renderer.domElement );
+
+			var geometry = new THREE.BoxGeometry( .03, .03, .03 );
+			var origin_material = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
+			var origin = new THREE.Mesh( geometry, origin_material );
+			scene.add( origin );
+			var arm0_material = new THREE.MeshBasicMaterial( { color: 0xff0000 } );
+			var arm0 = new THREE.Mesh( geometry, arm0_material );
+			scene.add( arm0 );
+			var arm1_material = new THREE.MeshBasicMaterial( { color: 0x0000ff } );
+			var arm1 = new THREE.Mesh( geometry, arm1_material );
+			scene.add( arm1 );
+			var target_material = new THREE.MeshBasicMaterial( { color: 0xffffff } );
+			var target = new THREE.Mesh( geometry, target_material );
+			scene.add( target );
+
+      var table_geometry = new THREE.PlaneGeometry(5, 5, 1, 1);
+      var table_material = new THREE.MeshBasicMaterial({color: 0x777777, side: THREE.DoubleSide});
+      var table = new THREE.Mesh(table_geometry, table_material);
+      table.position.z = -.1;
+      scene.add(table);
+
+      var v_origin = new THREE.Vector3(0, 0, 0);
+      var v_r0 = new THREE.Vector3(1, 1, 0);
+      var v_r1 = new THREE.Vector3(2, 2, 0);
+      var geometry = new THREE.Geometry();
+      geometry.vertices.push(v_origin);
+      geometry.vertices.push(v_r0);
+      geometry.vertices.push(v_r1);
+      var line_material = new THREE.LineBasicMaterial({
+        color: 0x00ff00,
+        linewidth: 5
+      });
+      var arm_line = new THREE.Line(geometry, line_material);
+      scene.add(arm_line);
+
+			//camera.position.x = -200;
+			//camera.position.y = -200;
+			camera.position.z = 3;
+			//camera.position.y = -1;
+			//camera.position.x = 1;
+      //camera.rotation.z = 1;
+      //camera.rotation.y = 1;
+      var controls = new THREE.OrbitControls(camera, renderer.domElement);
+      //controls.update();
+
+			var animate = function () {
+				requestAnimationFrame( animate );
+
+				origin.rotation.x += 0.01;
+				origin.rotation.y += 0.01;
+
+				renderer.render( scene, camera );
+			};
+
+      setInterval(() => {
+        fetch('/values')
+          .then(response => response.json())
+          .then(data=>{
+            console.log(data);
+            console.log(data['r0_x']);
+            arm0.position.set(data.r0_x / 100, data.r0_y / 100, data.r0_z / 100);
+            arm1.position.set(data.r1_x / 100, data.r1_y / 100, data.r0_z / 100);
+            target.position.set(data.target_x / 100, data.target_y / 100, 0);
+            v_r0.x = data.r0_x / 100;
+            v_r0.y = data.r0_y / 100;
+            v_r0.z = data.r0_z / 100;
+            v_r1.x = data.r1_x / 100;
+            v_r1.y = data.r1_y / 100;
+            v_r1.z = data.r0_z / 100;
+            arm_line.geometry.verticesNeedUpdate = true;
+            document.getElementById("debug_string").innerHTML = data.debug_string;
+          });
+      }, 100);
+			animate();
+		</script>
+	</body>
+</html>

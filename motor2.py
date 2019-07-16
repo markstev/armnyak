@@ -1,6 +1,7 @@
 from arduinoio import serial_control
 from protoc.motor_command_pb2 import MotorInitProto
 from protoc.motor_command_pb2 import MotorMoveProto
+from protoc.motor_command_pb2 import MotorConfigProto
 
 class MotorBank(object):
   def __init__(self):
@@ -12,10 +13,24 @@ class MotorBank(object):
 class Motor(object):
   def __init__(self, interface):
     self.interface = interface
-    self.SendProto("MINIT", self.InitProto())
+    init_proto = self.InitProto()
+    self.address = init_proto.address
+    self.SendProto("MINIT", init_proto)
 
   def Move(self, motor_move_proto):
     self.SendProto("MUP", motor_move_proto)
+
+  def SetMicrostepDivision(self, steps):
+    config_proto = MotorConfigProto()
+    config_proto.address = self.address
+    for i in range(5):
+      steps_test = 1 << i
+      if steps_test >= steps:
+        config_proto.ms0 = i & 0x01
+        config_proto.ms1 = i & 0x02
+        config_proto.ms2 = i & 0x04
+        break
+    self.SendProto("MCONF", config_proto)
 
   def SendProto(self, name, proto):
     serialized = proto.SerializeToString()
@@ -31,6 +46,7 @@ class Motor(object):
     print "Command length: %d" % len(command)
     self.interface.Write(0, command)
 
+
 class BaseMotor(Motor):
  def InitProto(self):
     motor_init = MotorInitProto()
@@ -43,6 +59,21 @@ class BaseMotor(Motor):
     motor_init.ms2_pin = 10
     return motor_init
 
+
+class WristMotor(Motor):
+ def InitProto(self):
+    motor_init = MotorInitProto()
+    motor_init.address = 1
+    motor_init.enable_pin = 7
+    motor_init.dir_pin = 3
+    motor_init.step_pin = 2
+    motor_init.ms0_pin = 6
+    motor_init.ms1_pin = 5
+    motor_init.ms2_pin = 4
+    return motor_init
+
+
 class MotorBankBase(MotorBank):
   def AddMotors(self):
     self.base_motor = BaseMotor(self.interface)
+    self.wrist_motor = WristMotor(self.interface)
