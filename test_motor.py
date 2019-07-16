@@ -28,8 +28,8 @@ for i in range(10):
   move_proto.min_speed = 0.0
   move_proto.steps = steps
   move_proto.disable_after_moving = True
-  move_proto.use_absolute_steps = False
-  move_proto.absolute_steps = 0
+  move_proto.use_absolute_steps = True
+  move_proto.absolute_steps = 200
   bank.base_motor.Move(move_proto)
   time.sleep(2)
 

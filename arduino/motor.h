@@ -9,7 +9,7 @@ namespace {
 const double kSpeedUpFactor = 0.996;
 const double kSlowDownFactor = 1.004;
 
-const uint32_t kPhysicalMinWait = 200;
+const uint32_t kPhysicalMinWait = 100;
 const uint32_t kPhysicalMaxWait = 2000;
 
 bool TimeToSlowDown(const int steps_remaining, const int current_wait, const int max_wait) {
@@ -74,31 +74,41 @@ class Motor {
     digitalWrite(init_proto_.dir_pin, direction_);
     disable_after_moving_ = move_proto.disable_after_moving;
     next_step_in_usec_ = 0;
-    digitalWrite(init_proto_.enable_pin, LOW);
+    MaybeDisableMotor();
   }
 
   void Tick() {
     if (remaining_steps_ <= 0) return;
     const unsigned long now = micros();
     if (now < next_step_in_usec_) return;
-    Step();
+    const bool can_update = Step();
     UpdateWait(now);
     --remaining_steps_;
+    if (!can_update) {
+      remaining_steps_ = 0;
+    }
+    MaybeDisableMotor();
+  }
+
+  bool MaybeDisableMotor() {
     if (remaining_steps_ == 0 && disable_after_moving_) {
       digitalWrite(init_proto_.enable_pin, HIGH);
+    } else {
+      digitalWrite(init_proto_.enable_pin, LOW);
     }
   }
 
-  void Step() {
+  bool Step() {
     if (direction_) {
-      if (current_absolute_steps_ >= max_steps_) return;
+      if (current_absolute_steps_ >= max_steps_) return false;
       ++current_absolute_steps_;
     } else {
-      if (current_absolute_steps_ <= min_steps_) return;
+      if (current_absolute_steps_ <= min_steps_) return false;
       --current_absolute_steps_;
     }
     pulse_state_ = !pulse_state_;
     digitalWrite(init_proto_.step_pin, pulse_state_ ? HIGH : LOW);
+    return true;
   }
 
   void UpdateWait(unsigned long now) {
