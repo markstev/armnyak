@@ -11,6 +11,7 @@ class MotorBank(object):
     device_basename = "ttyACM"
     self.interface = serial_control.SerialInterface(device_basename, baud=baud)
     self.AddMotors()
+    self.microsteps = 1
 
 class Motor(object):
   def __init__(self, interface):
@@ -42,7 +43,7 @@ class Motor(object):
   def MoveRelative(self, speed):
     """Speed should range from -1.0 to 1.0"""
     move_proto = self.CreateMoveProto()
-    move_proto.max_speed = abs(speed) * 1500
+    move_proto.max_speed = abs(speed) * 1500 * self.microsteps
     move_proto.min_speed = 100
     move_proto.direction = speed > 0.0
     move_proto.steps = self.StepsPerSecond()
@@ -52,10 +53,10 @@ class Motor(object):
   def MoveAbsolute(self, speed, world_radians):
     """Speed should range from -1.0 to 1.0"""
     move_proto = self.CreateMoveProto()
-    move_proto.max_speed = abs(speed) * 1500
+    move_proto.max_speed = abs(speed) * 1500 * self.microsteps
     move_proto.min_speed = 100
     move_proto.absolute_steps = int(world_radians * self.StepsPerRadian())
-    logging.info("Move to: %d", move_proto.absolute_steps)
+    #logging.info("Move to: %d at %.02f", move_proto.absolute_steps, move_proto.max_speed)
     move_proto.use_absolute_steps = True
     return self.Move(move_proto)
 
@@ -73,6 +74,7 @@ class Motor(object):
     config_proto.max_steps = max_steps
     config_proto.zero = set_zero
     self.SendProto("MCONF", config_proto)
+    self.microsteps = microsteps
 
   def SendProto(self, name, proto):
     serialized = proto.SerializeToString()
@@ -83,9 +85,9 @@ class Motor(object):
       raw_message.append(x)
     #command = name + "".join(raw_message)
     command = raw_message
-    print "Command: %s" % command
-    print "Command: %s" % [ord(x) for x in raw_message]
-    print "Command length: %d" % len(command)
+    #   print "Command: %s" % command
+    #   print "Command: %s" % [ord(x) for x in raw_message]
+    #   print "Command length: %d" % len(command)
     self.interface.Write(0, command)
 
 
