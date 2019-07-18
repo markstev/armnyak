@@ -8,8 +8,10 @@ import logging
 class MotorBank(object):
   def __init__(self):
     baud = 9600
-    device_basename = "ttyACM"
+    device_basename = "ttyACM0"
     self.interface = serial_control.SerialInterface(device_basename, baud=baud)
+    device_basename = "ttyACM2"
+    self.interface2 = serial_control.SerialInterface(device_basename, baud=baud)
     self.AddMotors()
     self.microsteps = 1
 
@@ -134,8 +136,68 @@ class WristMotor(Motor):
   def StepsPerRadian(self):
     return 2600 / math.pi
 
+class GripMotor(Motor):
+  def StepsPerSecond(self):
+    return 2600
+
+  def AngularRotationPerSecond(self):
+    return math.pi
+
+  def StepsPerRadian(self):
+    return 2600 / math.pi
+
+class LeftGripMotor(GripMotor):
+  def InitProto(self):
+    motor_init = MotorInitProto()
+    motor_init.address = 1
+    motor_init.enable_pin = 7
+    motor_init.dir_pin = 3
+    motor_init.step_pin = 2
+    motor_init.ms0_pin = 6
+    motor_init.ms1_pin = 5
+    motor_init.ms2_pin = 4
+    return motor_init
+
+class RightGripMotor(GripMotor):
+  def InitProto(self):
+    motor_init = MotorInitProto()
+    motor_init.address = 0
+    motor_init.enable_pin = 13
+    motor_init.dir_pin = 8
+    motor_init.step_pin = 9
+    motor_init.ms0_pin = 12
+    motor_init.ms1_pin = 11
+    motor_init.ms2_pin = 10
+    return motor_init
+
+
+class WristTiltMotor(Motor):
+  def InitProto(self):
+    motor_init = MotorInitProto()
+    motor_init.address = 2
+    motor_init.enable_pin = 17
+    motor_init.dir_pin = 14
+    motor_init.step_pin = 15
+    motor_init.ms0_pin = 18
+    motor_init.ms1_pin = 19
+    motor_init.ms2_pin = 16
+    return motor_init
+
+  def StepsPerSecond(self):
+    return 2600
+
+  def AngularRotationPerSecond(self):
+    return math.pi
+
+  def StepsPerRadian(self):
+    return 2600 / math.pi
+
 
 class MotorBankBase(MotorBank):
   def AddMotors(self):
     self.base_motor = BaseMotor(self.interface)
     self.wrist_motor = WristMotor(self.interface)
+    self.wrist_tilt_motor = WristTiltMotor(self.interface)
+    # TODO: THESE ADDRESSES ARE DUPLICATED
+    self.left_grip = LeftGripMotor(self.interface)
+    self.right_grip = RightGripMotor(self.interface)
