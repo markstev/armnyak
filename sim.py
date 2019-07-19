@@ -2,7 +2,7 @@
 import sys
 import math
 from arm_simulator import ArmSimulator
-from controller import Controller
+from controller import Controller, MathController
 import logging
 import SimpleHTTPServer
 import SocketServer
@@ -10,19 +10,21 @@ from BaseHTTPServer import BaseHTTPRequestHandler
 import motor2
 import json
 import time
+import config
 
 #root = logging.getLogger()
 #root.setLevel(logging.DEBUG)
 
 simulator = ArmSimulator()
-simulator.Configure(30, 10)
-simulator.SetTargetAbsolute(math.pi / 3,  40, 5, 7)
+arm_config = config.ArmConfig()
+simulator.Configure(config.ArmConfig())
+simulator.SetTargetAbsolute(math.pi / 3,  arm_config.r0 + arm_config.r1_camera, arm_config.target_width, 7)
 
 
 PORT = 8000
 
 
-controller = Controller()
+controller = MathController(arm_config)
 bank = motor2.MotorBankBase()
 bank.wrist_motor.Configure(microsteps=4, max_steps=1600, min_steps=-1600)
 bank.base_motor.Configure(microsteps=2,
@@ -63,7 +65,7 @@ class MyRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
         simulator.Step(0.1)
         if simulator.override_camera is None:
           simulator.ControlStep(0.1, controller)
-        json_string = json.dumps(simulator.Positions())
+        json_string = json.dumps(simulator.Positions(controller))
 	self.send_response(200)
 	self.send_header('Content-Type', 'application/json')
         self.end_headers()
@@ -89,8 +91,9 @@ class MyRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
         data = json.loads(self.data_string)
         logging.info(data)
         target = data[u"target"]
-        simulator.OverrideCamera(-target[u"horiz_offset_rad"],
+        camera_view = config.CameraView(-target[u"horiz_offset_rad"],
                 target[u"width_rad"], target[u"vert_offset_rad"])
+        simulator.OverrideCamera(camera_view)
         simulator.ControlStep(0.1, controller)
         self.SendOk()
         logging.info("POST DONE IN: %.02f", time.time() - start)

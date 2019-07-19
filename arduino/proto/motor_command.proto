@@ -27,6 +27,8 @@ message MotorMoveProto {
   // If set, used instead of steps.
   required bool use_absolute_steps = 7;
   required int32 absolute_steps = 8;
+  required bool should_tare = 9;
+  required int32 tare_current_steps = 10;
 }
 
 message MotorConfigProto {
@@ -37,4 +39,10 @@ message MotorConfigProto {
   required bool zero = 5;
   required int32 min_steps = 6;
   required int32 max_steps = 7;
+}
+
+message MoveAll {
+  required MotorMoveProto top_left = 1;
+  required MotorMoveProto middle = 2;
+  required MotorMoveProto top_right = 3;
 }

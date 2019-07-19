@@ -1,4 +1,6 @@
 import math
+import physical_map
+import config
 
 class MotorController(object):
     def __init__(self, m, b):
@@ -26,15 +28,58 @@ class Controller(object):
         self.base_motor = MotorController(0.2, 0)
         self.lift_motor = MotorController(0.1, 0)
         self.wrist_motor = MotorController(0.4, 0)
+        self.desired_theta = 0
+        self.desired_phi = 0
 
-    def Update(self, offset_tuple, time_delta):
+    def Update(self, camera_view, arm_current_settings, time_delta):
         """
         Base target is distance to target, inferred from width_radians
         Lift target is vertical_offset_radians -> 0
         Wrist target is horiz_offset_radians -> 0
         """
-        rho = self.lift_motor.GetNextSpeed(offset_tuple[2], time_delta, 0)
+        rho = self.lift_motor.GetNextSpeed(camera_view.vertical_offset_radians, time_delta, 0)
         target_width_radians = 0.7  # 5cm width at 10cm away
-        theta = self.base_motor.GetNextSpeed(target_width_radians - offset_tuple[1], time_delta, -rho)
-        phi = self.wrist_motor.GetNextSpeed(offset_tuple[0], time_delta, theta)
+        theta = self.base_motor.GetNextSpeed(target_width_radians - camera_view.width_radians, time_delta, -rho)
+        phi = self.wrist_motor.GetNextSpeed(camera_view.horiz_offset_radians, time_delta, theta)
         return (theta, phi, rho)
+
+
+class MathController(object):
+    def __init__(self, arm_config):
+        self.base_motor = MotorController(0.2, 0)
+        self.lift_motor = MotorController(0.1, 0)
+        self.wrist_motor = MotorController(0.4, 0)
+        self.arm_config = arm_config
+        self.desired_theta = 0
+        self.desired_phi = 0
+
+    def Update(self, camera_view, arm_current, time_delta):
+        """
+        Base target is distance to target, inferred from width_radians
+        Lift target is vertical_offset_radians -> 0
+        Wrist target is horiz_offset_radians -> 0
+        """
+        rho = self.lift_motor.GetNextSpeed(camera_view.vertical_offset_radians, time_delta, 0)
+        target_position = physical_map.EstimateTargetPosition(camera_view.width_radians,
+                camera_view.horiz_offset_radians, self.arm_config, arm_current)
+        desired_theta, desired_phi = physical_map.EstimateAnglesDesired(camera_view,
+                self.arm_config, arm_current, target_position)
+        self.desired_theta = desired_theta
+        self.desired_phi = desired_phi
+        delta_theta = desired_theta - arm_current.theta
+        delta_phi = desired_phi - arm_current.phi
+        # TODO: config vars
+        time_for_theta = abs(delta_theta / (math.pi / 3.0))
+        time_for_phi = abs(delta_phi / math.pi)
+        total_time = max(time_for_theta, time_for_phi)
+        def sign(x):
+            if x >= 0:
+                return 1
+            else:
+                return -1
+        def speed(angle_change, time_to_reach_angle, total_time_to_move):
+            if total_time_to_move == 0:
+                return 0.0
+            return sign(angle_change) * min(1.0, time_to_reach_angle / total_time_to_move)
+        return (speed(delta_theta, time_for_theta, total_time),
+                speed(delta_phi, time_for_phi, total_time), rho)

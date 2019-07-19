@@ -2,10 +2,13 @@ import math
 import logging
 import numpy
 import random
-from config import ArmConfig, ArmCurrentSettings
+from config import ArmConfig, ArmCurrentSettings, CameraView
+import physical_map
+import collections
 
 START_PHI = math.pi * 1.2
 # CCW is positive for both phi and theta
+
 
 def NormalizeAngle(angle, start=-math.pi, end=math.pi):
     while angle < start:
@@ -25,9 +28,10 @@ class ArmSimulator(object):
         self.override_camera = None
         self.debug_string = ""
 
-    def Configure(self, r0, r1, theta_init=0, phi_init=START_PHI, rho_init=0):
-        self.r0 = r0
-        self.r1 = r1
+    def Configure(self, arm_config, theta_init=0, phi_init=START_PHI, rho_init=0):
+        self.arm_config = arm_config
+        self.r0 = arm_config.r0
+        self.r1 = arm_config.r1_camera
         self.theta = theta_init
         self.phi = phi_init
         self.rho = rho_init
@@ -38,7 +42,7 @@ class ArmSimulator(object):
 
     def SendCoordsToMotorBank(self, motor_bank):
         self.motor_bank = motor_bank
-        self.enable_physical_control = True
+        self.enable_physical_control = False
         self.SetDisableAfterMove(False)
 
     def TogglePhysicalControl(self):
@@ -74,6 +78,8 @@ class ArmSimulator(object):
 
         self.r1_x = self.r0_x + self.r1 * math.cos(self.phi + self.theta - math.pi)
         self.r1_y = self.r0_y + self.r1 * math.sin(self.phi + self.theta - math.pi)
+        self.r1_x_camera = self.r0_x + self.arm_config.r1_camera * math.cos(self.phi + self.theta - math.pi)
+        self.r1_y_camera = self.r0_y + self.arm_config.r1_camera * math.sin(self.phi + self.theta - math.pi)
         if self.enable_physical_control and self.motor_bank is not None:
             base_angle = NormalizeAngle(-self.theta)
             wrist_angle = NormalizeAngle(-self.phi + math.pi)
@@ -87,13 +93,10 @@ class ArmSimulator(object):
                 self.target_distance * math.sin(self.target_angle),
                 self.target_height)
 
-    def OverrideCamera(self, horiz_offset_radians, width_radians, vertical_offset_radians):
-        self.override_camera = (
-                horiz_offset_radians,
-                width_radians,
-                vertical_offset_radians)
+    def OverrideCamera(self, camera_view):
+        self.override_camera = camera_view
 
-    def CameraView(self):
+    def GetCameraView(self):
         """Computes the view from a camera mounted on the end of the arm (r1).
         
         Returns a tuple of (
@@ -104,8 +107,8 @@ class ArmSimulator(object):
         if self.override_camera:
             return self.override_camera
         tx, ty, tz = self.TargetPosition()
-        dx = tx - self.r1_x
-        dy = ty - self.r1_y
+        dx = tx - self.r1_x_camera
+        dy = ty - self.r1_y_camera
         absolute_horiz_angle = numpy.arctan2(dy, dx)
         r1_angle = self.phi + self.theta - math.pi
         # Left is positive
@@ -123,7 +126,7 @@ class ArmSimulator(object):
         self.debug_string += "---CAMERA---\nhoriz_offset = %.02f\ndistance = %.02f\nwidth = %.02f\nvertical=%.02f\nvert_offset_rad = %.02f" % (
                 horiz_offset_radians, distance, width_radians,
                 self.r0_vertical, vertical_offset_radians)
-        return (horiz_offset_radians, width_radians, vertical_offset_radians)
+        return CameraView(horiz_offset_radians, width_radians, vertical_offset_radians)
 
 
     def Step(self, time):
@@ -144,7 +147,7 @@ class ArmSimulator(object):
 
     def ControlStep(self, time, controller):
         theta_speed, phi_speed, rho_speed = controller.Update(
-                self.CameraView(), time)
+                self.GetCameraView(), self.GetArmCurrentPositions(), time)
         if self.phi < math.pi:
             theta_speed *= -1.0
         #   logging.info(
@@ -169,8 +172,22 @@ class ArmSimulator(object):
                 next_control_time += control_step
                 last_control_time = t
 
-    def Positions(self):
+    def GetArmCurrentPositions(self):
+        return ArmCurrentSettings(self.theta, self.phi, self.rho)
+
+    def Positions(self, controller):
         tx, ty, tz = self.TargetPosition()
+        camera_view = self.GetCameraView()
+        arm_current = self.GetArmCurrentPositions()
+        est_tx, est_ty = physical_map.EstimateTargetPosition(
+                camera_view.width_radians,
+                camera_view.horiz_offset_radians,
+                self.arm_config,
+                arm_current)
+        plan_r0_x = self.arm_config.r0 * math.cos(controller.desired_theta)
+        plan_r0_y = self.arm_config.r0 * math.sin(controller.desired_theta)
+        plan_r1_x = self.arm_config.r1_grab * math.cos(controller.desired_phi + controller.desired_theta - math.pi) + plan_r0_x
+        plan_r1_y = self.arm_config.r1_grab * math.sin(controller.desired_phi + controller.desired_theta - math.pi) + plan_r0_y
         return {
             "r0_x": self.r0_x,
             "r0_y": self.r0_y,
@@ -179,6 +196,13 @@ class ArmSimulator(object):
             "r1_y": self.r1_y,
             "target_x": tx,
             "target_y": ty,
+            "target_z": tz,
+            "target_est_x": est_tx,
+            "target_est_y": est_ty,
+            "plan_r0_x": plan_r0_x,
+            "plan_r0_y": plan_r0_y,
+            "plan_r1_x": plan_r1_x,
+            "plan_r1_y": plan_r1_y,
             "debug_string": self.debug_string,
             }
 

@@ -14,8 +14,8 @@ temp_pin_threshold = 20
 
 bank= MotorBankBase()
 start = time.time()
-bank.wrist_motor.Configure(microsteps=4, max_steps=1600, min_steps=-1600)
-bank.base_motor.Configure(microsteps=2, max_steps=32000, min_steps=-32000)
+bank.wrist_motor.Configure(microsteps=1, max_steps=1600, min_steps=-1600)
+bank.base_motor.Configure(microsteps=1, max_steps=32000, min_steps=-32000)
 stop = time.time()
 logging.info("msec to push update = %f", (stop - start) * 1000.0)
 def calibrate_base(bank):
@@ -83,13 +83,15 @@ def calibrate_wrist(bank):
 #bank.wrist_motor.MoveRelative(-0.5)
 
 forward = 1.0
-for i in range(6, 10):
+for i in range(8, 10):
   forward *= -1
   steps = 4000
-  bank.base_motor.Configure(microsteps=1, max_steps=6000, min_steps=-6000)
+  bank.base_motor.Configure(microsteps=1, max_steps=600000, min_steps=-600000)
   #bank.base_motor.MoveRelative(forward * 0.1 * i)
-  bank.base_motor.MoveAbsolute(1.0, forward)
-  time.sleep(5)
+  logging.info("Trying to move in a circle.")
+  bank.wrist_motor.MoveAbsolute(0.6, forward * math.pi / 4)
+  #bank.base_motor.MoveAbsolute(1.0, forward * math.pi * 2.0)
+  time.sleep(10)
 
 ###   move_proto = MotorMoveProto()
 ###   move_proto.address = 1

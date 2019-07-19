@@ -4,6 +4,7 @@ from protoc.motor_command_pb2 import MotorMoveProto
 from protoc.motor_command_pb2 import MotorConfigProto
 import math
 import logging
+from config import ArmConfig
 
 class MotorBank(object):
   def __init__(self):
@@ -16,12 +17,15 @@ class MotorBank(object):
     self.microsteps = 1
 
 class Motor(object):
-  def __init__(self, interface):
+  def __init__(self, interface, gear_factor):
     self.interface = interface
     init_proto = self.InitProto()
     self.address = init_proto.address
     self.SendProto("MINIT", init_proto)
     self.disable_after_moving = True
+    self.steps_per_rotation = 200  # for the motor, not the output.
+    self.gear_factor = gear_factor
+    self.motor_position = 0
 
   def Move(self, motor_move_proto):
     self.SendProto("MUP", motor_move_proto)
@@ -50,6 +54,10 @@ class Motor(object):
     move_proto.direction = speed > 0.0
     move_proto.steps = self.StepsPerSecond()
     move_proto.use_absolute_steps = False
+    if move_proto.direction:
+        self.motor_position += steps
+    else:
+        self.motor_position -= steps
     return self.Move(move_proto)
 
   def MoveAbsolute(self, speed, world_radians):
@@ -58,8 +66,10 @@ class Motor(object):
     move_proto.max_speed = abs(speed) * 1500 * self.microsteps
     move_proto.min_speed = 100
     move_proto.absolute_steps = int(world_radians * self.StepsPerRadian())
+    logging.info("Moving to: %d = %f * %f", move_proto.absolute_steps, world_radians, self.StepsPerRadian())
     #logging.info("Move to: %d at %.02f", move_proto.absolute_steps, move_proto.max_speed)
     move_proto.use_absolute_steps = True
+    self.motor_position = move_proto.absolute_steps
     return self.Move(move_proto)
 
   def Configure(self, microsteps, max_steps, min_steps, set_zero=False):
@@ -92,6 +102,17 @@ class Motor(object):
     #   print "Command length: %d" % len(command)
     self.interface.Write(0, command)
 
+  def StepsPerSecond(self):
+    # MAY NOT BE ACCURATE
+    return 20000 / 6
+
+  def AngularRotationPerSecond(self):
+    return self.StepsPerSecond() / self.StepsPerRadian()
+
+  def StepsPerRadian(self):
+    #return 9000 / math.pi
+    return self.gear_factor * self.steps_per_rotation / (2 * math.pi)
+
 
 class BaseMotor(Motor):
   def InitProto(self):
@@ -104,15 +125,6 @@ class BaseMotor(Motor):
     motor_init.ms1_pin = 11
     motor_init.ms2_pin = 10
     return motor_init
-
-  def StepsPerSecond(self):
-    return 20000 / 6
-
-  def AngularRotationPerSecond(self):
-    return math.pi / 3.0
-
-  def StepsPerRadian(self):
-    return 9000 / math.pi
 
 
 class WristMotor(Motor):
@@ -127,24 +139,8 @@ class WristMotor(Motor):
     motor_init.ms2_pin = 4
     return motor_init
 
-  def StepsPerSecond(self):
-    return 2600
-
-  def AngularRotationPerSecond(self):
-    return math.pi
-
-  def StepsPerRadian(self):
-    return 2600 / math.pi
-
 class GripMotor(Motor):
-  def StepsPerSecond(self):
-    return 2600
-
-  def AngularRotationPerSecond(self):
-    return math.pi
-
-  def StepsPerRadian(self):
-    return 2600 / math.pi
+    pass
 
 class LeftGripMotor(GripMotor):
   def InitProto(self):
@@ -183,21 +179,13 @@ class WristTiltMotor(Motor):
     motor_init.ms2_pin = 16
     return motor_init
 
-  def StepsPerSecond(self):
-    return 2600
-
-  def AngularRotationPerSecond(self):
-    return math.pi
-
-  def StepsPerRadian(self):
-    return 2600 / math.pi
-
 
 class MotorBankBase(MotorBank):
   def AddMotors(self):
-    self.base_motor = BaseMotor(self.interface)
-    self.wrist_motor = WristMotor(self.interface)
-    self.wrist_tilt_motor = WristTiltMotor(self.interface)
+    arm_config = ArmConfig()
+    self.base_motor = BaseMotor(self.interface, arm_config.base_gear_factor)
+    self.wrist_motor = WristMotor(self.interface, arm_config.wrist_gear_factor)
+    self.wrist_tilt_motor = WristTiltMotor(self.interface, arm_config.tilt_gear_factor)
     # TODO: THESE ADDRESSES ARE DUPLICATED
-    self.left_grip = LeftGripMotor(self.interface)
-    self.right_grip = RightGripMotor(self.interface)
+    self.left_grip = LeftGripMotor(self.interface, arm_config.grip_gear_factor)
+    self.right_grip = RightGripMotor(self.interface, arm_config.grip_gear_factor)

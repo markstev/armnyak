@@ -40,6 +40,16 @@
 			var target = new THREE.Mesh( geometry, target_material );
 			scene.add( target );
 
+			var est_target_material = new THREE.MeshBasicMaterial( { color: 0xffff00 } );
+			var est_target = new THREE.Mesh( geometry, est_target_material );
+			scene.add( est_target );
+
+			var plan_material = new THREE.MeshBasicMaterial( { color: 0x777700 } );
+			var plan_r0 = new THREE.Mesh( geometry, plan_material );
+			scene.add( plan_r0 );
+			var plan_r1 = new THREE.Mesh( geometry, plan_material );
+			scene.add( plan_r1 );
+
       var table_geometry = new THREE.PlaneGeometry(5, 5, 1, 1);
       var table_material = new THREE.MeshBasicMaterial({color: 0x777777, side: THREE.DoubleSide});
       var table = new THREE.Mesh(table_geometry, table_material);
@@ -87,7 +97,10 @@
             console.log(data['r0_x']);
             arm0.position.set(data.r0_x / 100, data.r0_y / 100, data.r0_z / 100);
             arm1.position.set(data.r1_x / 100, data.r1_y / 100, data.r0_z / 100);
-            target.position.set(data.target_x / 100, data.target_y / 100, 0);
+            target.position.set(data.target_x / 100, data.target_y / 100, data.target_z / 100);
+            est_target.position.set(data.target_est_x / 100, data.target_est_y / 100, 0);
+            plan_r0.position.set(data.plan_r0_x / 100, data.plan_r0_y / 100, 0);
+            plan_r1.position.set(data.plan_r1_x / 100, data.plan_r1_y / 100, 0);
             v_r0.x = data.r0_x / 100;
             v_r0.y = data.r0_y / 100;
             v_r0.z = data.r0_z / 100;

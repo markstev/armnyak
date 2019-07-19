@@ -5,6 +5,8 @@ import logging
 import threading
 import time
 
+PinCallback = collections.namedtuple('PinCallback', 'pin trigger_value callback permanent')
+
 class Reader(object):
     def __init__(self):
         baud = 9600
@@ -47,6 +49,7 @@ class InputBoard(object):
         self.thread = threading.Thread(name="Read", target=self.UpdateRead)
         self.thread.daemon = True
         self.pin_values = [0, 0]
+        self.callbacks = {}
 
     def Start(self):
         self.thread.start()
@@ -64,6 +67,17 @@ class InputBoard(object):
                 self.pin_values[1] = message.read_bits_1
                 #if message.dist_cm < 500:
                 logging.info("DIST CM = %.02f", message.dist_cm)
+                callbacks_to_delete = []
+                for pin, pin_callback in self.callbacks.iteritems():
+                    if self.GetPin(pin) == pin_callback.trigger_value:
+                        pin_callback.callback()
+                        if not pin_callback.permanent:
+                            callbacks_to_delete.append(pin)
+                for cb in callbacks_to_delete:
+                    del self.callbacks[cb]
+
+    def RegisterCallback(self, pin, trigger_value, callback, permanent=False):
+        self.callbacks[pin] = PinCallback(pin, trigger_value, callback, permanent)
 
 
 #   read_proto = IOReadProto()
