@@ -83,7 +83,7 @@ class Motor {
       }
     }
     const float acceleration = max_speed_;
-    UpdateSpeed(min_speed_, max_speed_, current_speed_steps_per_second_, acceleration,
+    UpdateSpeed(min_speed_, max_speed_, current_speed_steps_per_second_, kAcceleration,
         remaining_steps_, &current_speed_steps_per_second_, &current_wait_);
     digitalWrite(init_proto_.dir_pin, direction_);
     disable_after_moving_ = move_proto.disable_after_moving;
@@ -98,7 +98,7 @@ class Motor {
     const bool can_update = Step();
     --remaining_steps_;
     const float acceleration = max_speed_;
-    UpdateSpeed(min_speed_, max_speed_, current_speed_steps_per_second_, acceleration,
+    UpdateSpeed(min_speed_, max_speed_, current_speed_steps_per_second_, kAcceleration,
         remaining_steps_, &current_speed_steps_per_second_, &current_wait_);
     next_step_in_usec_ = now + current_wait_;
     if (!can_update) {

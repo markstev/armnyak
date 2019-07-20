@@ -11,10 +11,9 @@ class MotorBank(object):
     baud = 9600
     device_basename = "ttyACM0"
     self.interface = serial_control.SerialInterface(device_basename, baud=baud)
-    device_basename = "ttyACM2"
+    device_basename = "ttyACM1"
     self.interface2 = serial_control.SerialInterface(device_basename, baud=baud)
     self.AddMotors()
-    self.microsteps = 1
 
 class Motor(object):
   def __init__(self, interface, gear_factor):
@@ -44,6 +43,8 @@ class Motor(object):
     move_proto.steps = 1
     move_proto.use_absolute_steps = False
     move_proto.absolute_steps = 0
+    move_proto.should_tare = False
+    move_proto.tare_current_steps = 0
     return move_proto
 
   def MoveRelative(self, speed):
@@ -52,12 +53,15 @@ class Motor(object):
     move_proto.max_speed = abs(speed) * 1500 * self.microsteps
     move_proto.min_speed = 100
     move_proto.direction = speed > 0.0
-    move_proto.steps = self.StepsPerSecond()
+    if speed == 0.0:
+        move_proto.steps = 0
+    else:
+        move_proto.steps = self.StepsPerSecond()
     move_proto.use_absolute_steps = False
     if move_proto.direction:
-        self.motor_position += steps
+        self.motor_position += move_proto.steps
     else:
-        self.motor_position -= steps
+        self.motor_position -= move_proto.steps
     return self.Move(move_proto)
 
   def MoveAbsolute(self, speed, world_radians):
@@ -114,7 +118,7 @@ class Motor(object):
     return self.gear_factor * self.steps_per_rotation / (2 * math.pi)
 
 
-class BaseMotor(Motor):
+class TopRightMotor(Motor):
   def InitProto(self):
     motor_init = MotorInitProto()
     motor_init.address = 0
@@ -127,7 +131,7 @@ class BaseMotor(Motor):
     return motor_init
 
 
-class WristMotor(Motor):
+class MiddleMotor(Motor):
   def InitProto(self):
     motor_init = MotorInitProto()
     motor_init.address = 1
@@ -167,7 +171,7 @@ class RightGripMotor(GripMotor):
     return motor_init
 
 
-class WristTiltMotor(Motor):
+class TopLeftMotor(Motor):
   def InitProto(self):
     motor_init = MotorInitProto()
     motor_init.address = 2
@@ -183,9 +187,10 @@ class WristTiltMotor(Motor):
 class MotorBankBase(MotorBank):
   def AddMotors(self):
     arm_config = ArmConfig()
-    self.base_motor = BaseMotor(self.interface, arm_config.base_gear_factor)
-    self.wrist_motor = WristMotor(self.interface, arm_config.wrist_gear_factor)
-    self.wrist_tilt_motor = WristTiltMotor(self.interface, arm_config.tilt_gear_factor)
+    self.base_motor = MiddleMotor(self.interface, arm_config.base_gear_factor)
+    self.base_motor2 = MiddleMotor(self.interface2, arm_config.base_gear_factor)
+    self.wrist_motor = MiddleMotor(self.interface, arm_config.wrist_gear_factor)
+    self.wrist_tilt_motor = TopLeftMotor(self.interface, arm_config.tilt_gear_factor)
     # TODO: THESE ADDRESSES ARE DUPLICATED
-    self.left_grip = LeftGripMotor(self.interface, arm_config.grip_gear_factor)
-    self.right_grip = RightGripMotor(self.interface, arm_config.grip_gear_factor)
+    self.left_grip = TopRightMotor(self.interface, arm_config.grip_gear_factor)
+    self.right_grip = MiddleMotor(self.interface, arm_config.grip_gear_factor)

@@ -33,7 +33,7 @@ set_source_files_properties(${PROTO_SRCS} ${PROTO_HDRS}
     PROPERTIES GENERATED TRUE)
 
 # Needed to force generation of the proto sources.
-#add_executable(test test.cc ${PROTO_SRCS} ${PROTO_HDRS})
+#add_executable(test motor_controller.cc ${PROTO_SRCS} ${PROTO_HDRS})
 
 #set(${FIRMWARE_NAME}_BOARD mega2560)               # Arduino Target board
 set(${FIRMWARE_NAME}_BOARD uno)               # Arduino Target board
@@ -43,6 +43,7 @@ message("SRCS ARE " ${motor_controller_SRCS})
 set(${FIRMWARE_NAME}_HDRS   ${PROTO_HDRS})
 
 set(${FIRMWARE_NAME}_PORT /dev/ttyACM0)            # Serial upload port
+#set(${FIRMWARE_NAME}_PORT /dev/ttyACM2)            # Serial upload port
 
 #====================================================================#
 #  Target generation                                                 #

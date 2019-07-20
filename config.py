@@ -12,7 +12,7 @@ class ArmConfig(object):
 
         self.base_gear_factor = 39.27
         self.lift_gear_factor = 80
-        self.wrist_gear_factor = 7
+        self.wrist_gear_factor = 7 * 2
 
         self.tilt_gear_factor = 7
         self.grip_gear_factor = 1

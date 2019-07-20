@@ -87,11 +87,17 @@ for i in range(8, 10):
   forward *= -1
   steps = 4000
   bank.base_motor.Configure(microsteps=1, max_steps=600000, min_steps=-600000)
+  bank.base_motor2.Configure(microsteps=1, max_steps=600000, min_steps=-600000)
+  bank.wrist_motor.Configure(microsteps=1, max_steps=600000, min_steps=-600000)
+  bank.wrist_tilt_motor.Configure(microsteps=1, max_steps=600000, min_steps=-600000)
   #bank.base_motor.MoveRelative(forward * 0.1 * i)
   logging.info("Trying to move in a circle.")
-  bank.wrist_motor.MoveAbsolute(0.6, forward * math.pi / 4)
+  #bank.wrist_tilt_motor.MoveAbsolute(0.6, forward * math.pi / 6)
+  bank.wrist_tilt_motor.SetDisableAfterMoving(True)
+  bank.base_motor.MoveAbsolute(0.6, forward * math.pi / 6)
+  bank.base_motor2.MoveAbsolute(0.6, forward * math.pi / 6)
   #bank.base_motor.MoveAbsolute(1.0, forward * math.pi * 2.0)
-  time.sleep(10)
+  time.sleep(2)
 
 ###   move_proto = MotorMoveProto()
 ###   move_proto.address = 1

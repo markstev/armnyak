@@ -4,13 +4,14 @@ from protoc.io_read_pb2 import ConfigureIOReadProto
 import logging
 import threading
 import time
+import collections
 
 PinCallback = collections.namedtuple('PinCallback', 'pin trigger_value callback permanent')
 
 class Reader(object):
     def __init__(self):
         baud = 9600
-        device_basename = "ttyACM1"
+        device_basename = "ttyACM2"
         self.interface = serial_control.SerialInterface(device_basename, baud=baud)
 
     def Read(self):
@@ -18,10 +19,13 @@ class Reader(object):
         if message:
             read_proto = IOReadProto()
             #logging.info("".join([chr(x) for x in message.command]))
+            command_str = "".join([chr(x) for x in message.command])
             try:
-              read_proto.ParseFromString("".join([chr(x) for x in message.command]))
+              read_proto.ParseFromString(command_str)
+              logging.info("Good parse %s", message.command)
             except:
-              logging.info("Parse proto error")
+              logging.info("Parse proto error %s", message.command)
+              return False
             #logging.info(read_proto.enable_read_bits_0)
             return read_proto
         return False
@@ -68,6 +72,7 @@ class InputBoard(object):
                 #if message.dist_cm < 500:
                 logging.info("DIST CM = %.02f", message.dist_cm)
                 callbacks_to_delete = []
+                logging.info("Has %d callbacks", len(self.callbacks))
                 for pin, pin_callback in self.callbacks.iteritems():
                     if self.GetPin(pin) == pin_callback.trigger_value:
                         pin_callback.callback()
@@ -86,11 +91,11 @@ class InputBoard(object):
 #   read_proto.read_bits_0 = 43
 #   read_proto.read_bits_1 = 44
 #   logging.info("Message should be: %s", read_proto.SerializeToString())
-board = InputBoard()
-board.Start()
-while True:
-    logging.info("P24=%d P25=%d P26=%d", board.GetPin(24), board.GetPin(25), board.GetPin(26))
-    time.sleep(0.2)
+#   board = InputBoard()
+#   board.Start()
+#   while True:
+#       logging.info("P24=%d P25=%d P26=%d", board.GetPin(24), board.GetPin(25), board.GetPin(26))
+#       time.sleep(0.2)
 #   logging.info("Start loop")
 #   reader.Configure()
 #   logging.info("Start Read")
