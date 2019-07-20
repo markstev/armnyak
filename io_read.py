@@ -22,7 +22,7 @@ class Reader(object):
             command_str = "".join([chr(x) for x in message.command])
             try:
               read_proto.ParseFromString(command_str)
-              logging.info("Good parse %s", message.command)
+              #logging.info("Good parse %s", message.command)
             except:
               logging.info("Parse proto error %s", message.command)
               return False
@@ -70,9 +70,10 @@ class InputBoard(object):
                 self.pin_values[0] = message.read_bits_0
                 self.pin_values[1] = message.read_bits_1
                 #if message.dist_cm < 500:
-                logging.info("DIST CM = %.02f", message.dist_cm)
+                if message.dist_cm != 0.0:
+                    pass
+                    #logging.info("DIST CM = %.02f", message.dist_cm)
                 callbacks_to_delete = []
-                logging.info("Has %d callbacks", len(self.callbacks))
                 for pin, pin_callback in self.callbacks.iteritems():
                     if self.GetPin(pin) == pin_callback.trigger_value:
                         pin_callback.callback()

@@ -42,9 +42,9 @@ void UpdateSpeed(const float min_speed, const float max_speed, const float curre
 class Motor {
  public:
   Motor() {
-    remaining_steps_ = 0;
     pulse_state_ = false;
     current_absolute_steps_ = 0;
+    target_absolute_steps_ = 0;
     current_speed_steps_per_second_ = 0;
   }
   
@@ -71,55 +71,61 @@ class Motor {
     min_speed_ = move_proto.min_speed;
     max_speed_ = move_proto.max_speed;
     if (move_proto.use_absolute_steps) {
-      const int32_t absolute_steps_target = max(min_steps_, min(max_steps_, move_proto.absolute_steps));
-      direction_ = absolute_steps_target > current_absolute_steps_;
-      remaining_steps_ = abs(absolute_steps_target - current_absolute_steps_);
+      target_absolute_steps_ = max(min_steps_, min(max_steps_, move_proto.absolute_steps));
     } else {
-      direction_ = move_proto.direction;
-      if (direction_) {
-        remaining_steps_ = min(move_proto.steps, max_steps_ - current_absolute_steps_);
+      if (move_proto.direction) {
+        target_absolute_steps_ = max(min_steps_, min(max_steps_, move_proto.steps + current_absolute_steps_));
       } else {
-        remaining_steps_ = min(move_proto.steps, -min_steps_ + current_absolute_steps_);
+        target_absolute_steps_ = max(min_steps_, min(max_steps_, -move_proto.steps + current_absolute_steps_));
       }
     }
     const float acceleration = max_speed_;
     UpdateSpeed(min_speed_, max_speed_, current_speed_steps_per_second_, kAcceleration,
-        remaining_steps_, &current_speed_steps_per_second_, &current_wait_);
-    digitalWrite(init_proto_.dir_pin, direction_);
+        StepsRemaining(), &current_speed_steps_per_second_, &current_wait_);
+    digitalWrite(init_proto_.dir_pin, Direction());
     disable_after_moving_ = move_proto.disable_after_moving;
     next_step_in_usec_ = 0;
-    MaybeDisableMotor();
+    MaybeDisableMotor(StepsRemaining());
+  }
+
+  bool Direction() const {
+    return target_absolute_steps_ > current_absolute_steps_;
+  }
+
+  uint32_t StepsRemaining() const {
+    return abs(target_absolute_steps_ - current_absolute_steps_);
   }
 
   void Tick() {
-    if (remaining_steps_ <= 0) return;
+    if (current_absolute_steps_ == target_absolute_steps_) return;
     const unsigned long now = micros();
     if (now < next_step_in_usec_) return;
     const bool can_update = Step();
-    --remaining_steps_;
     const float acceleration = max_speed_;
+    uint32_t steps_remaining = StepsRemaining();
     UpdateSpeed(min_speed_, max_speed_, current_speed_steps_per_second_, kAcceleration,
-        remaining_steps_, &current_speed_steps_per_second_, &current_wait_);
+        steps_remaining, &current_speed_steps_per_second_, &current_wait_);
     next_step_in_usec_ = now + current_wait_;
     if (!can_update) {
-      remaining_steps_ = 0;
+      current_absolute_steps_ = target_absolute_steps_;
+      steps_remaining = 0;
     }
-    MaybeDisableMotor();
+    MaybeDisableMotor(steps_remaining);
   }
 
-  bool MaybeDisableMotor() {
-    if (remaining_steps_ == 0 && disable_after_moving_) {
+  bool MaybeDisableMotor(const uint32_t steps_remaining) {
+    if (steps_remaining == 0 && disable_after_moving_) {
       digitalWrite(init_proto_.enable_pin, HIGH);
     } else {
       digitalWrite(init_proto_.enable_pin, LOW);
     }
-    if (remaining_steps_ == 0) {
+    if (steps_remaining == 0) {
       current_speed_steps_per_second_ = 0.0;
     }
   }
 
   bool Step() {
-    if (direction_) {
+    if (Direction()) {
       if (current_absolute_steps_ >= max_steps_) return false;
       ++current_absolute_steps_;
     } else {
@@ -142,12 +148,15 @@ class Motor {
     max_steps_ = config.max_steps;
   }
 
+  void Tare(const int32_t tare_to_steps) {
+    current_absolute_steps_ = tare_to_steps;
+  }
+
  private:
   MotorInitProto init_proto_;
 
   // Stepping state
   bool pulse_state_;
-  bool direction_;
 
   float current_speed_steps_per_second_;
   float min_speed_;
@@ -155,11 +164,11 @@ class Motor {
   uint32_t current_wait_;
 
   unsigned long next_step_in_usec_;
-  uint32_t remaining_steps_;
   bool disable_after_moving_;
   int32_t max_steps_;
   int32_t min_steps_;
   int32_t current_absolute_steps_;
+  int32_t target_absolute_steps_;
 };
 
 }  // namespace armnyak

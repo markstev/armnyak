@@ -2,6 +2,7 @@ from arduinoio import serial_control
 from protoc.motor_command_pb2 import MotorInitProto
 from protoc.motor_command_pb2 import MotorMoveProto
 from protoc.motor_command_pb2 import MotorConfigProto
+from protoc.motor_command_pb2 import MotorTareProto
 import math
 import logging
 from config import ArmConfig
@@ -43,8 +44,6 @@ class Motor(object):
     move_proto.steps = 1
     move_proto.use_absolute_steps = False
     move_proto.absolute_steps = 0
-    move_proto.should_tare = False
-    move_proto.tare_current_steps = 0
     return move_proto
 
   def MoveRelative(self, speed):
@@ -91,6 +90,13 @@ class Motor(object):
     config_proto.zero = set_zero
     self.SendProto("MCONF", config_proto)
     self.microsteps = microsteps
+
+  def Tare(self, world_radians):
+    tare_proto = MotorTareProto()
+    tare_proto.address = self.address
+    tare_proto.tare_to_steps = int(world_radians * self.StepsPerRadian())
+    logging.info("Tare to %d", tare_proto.tare_to_steps)
+    self.SendProto("MTARE", tare_proto)
 
   def SendProto(self, name, proto):
     serialized = proto.SerializeToString()

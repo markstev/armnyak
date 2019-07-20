@@ -19,6 +19,10 @@ const char* MOTOR_UPDATE = "MUP";
 const int MOTOR_UPDATE_LENGTH = 3;
 const char* MOTOR_CONFIG = "MCONF";
 const int MOTOR_CONFIG_LENGTH = 5;
+const char* MOTOR_TARE = "MTARE";
+const int MOTOR_TARE_LENGTH = 5;
+const char* MOTOR_UPDATE_ALL = "MUPA";
+const int MOTOR_UPDATE_ALL_LENGTH = 4;
 
 class MotorBankModule : public arduinoio::UCModule {
  public:
@@ -49,8 +53,7 @@ class MotorBankModule : public arduinoio::UCModule {
       pb_istream_t stream = pb_istream_from_buffer(buffer, length - MOTOR_UPDATE_LENGTH - 1);
       const bool status = pb_decode(&stream, MotorMoveProto_fields, &command_proto);
       if (!status) return false;
-      if (command_proto.address >= NUM_MOTORS) return false;
-      motors_[command_proto.address].Update(command_proto);
+      UpdateMotor(command_proto);
     } else if (length > MOTOR_CONFIG_LENGTH &&
         (strncmp(command, MOTOR_CONFIG, MOTOR_CONFIG_LENGTH) == 0)) {
       const uint8_t* buffer = (const uint8_t*) (command + MOTOR_CONFIG_LENGTH);
@@ -61,7 +64,34 @@ class MotorBankModule : public arduinoio::UCModule {
       if (!status) return false;
       if (command_proto.address >= NUM_MOTORS) return false;
       motors_[command_proto.address].Config(command_proto);
+    } else if (length > MOTOR_TARE_LENGTH &&
+        (strncmp(command, MOTOR_TARE, MOTOR_TARE_LENGTH) == 0)) {
+      const uint8_t* buffer = (const uint8_t*) (command + MOTOR_TARE_LENGTH);
+
+      MotorTareProto command_proto = MotorTareProto_init_zero;
+      pb_istream_t stream = pb_istream_from_buffer(buffer, length - MOTOR_TARE_LENGTH - 1);
+      const bool status = pb_decode(&stream, MotorTareProto_fields, &command_proto);
+      if (!status) return false;
+      if (command_proto.address >= NUM_MOTORS) return false;
+      motors_[command_proto.address].Tare(command_proto.tare_to_steps);
+    } else if (length > MOTOR_UPDATE_ALL_LENGTH &&
+        (strncmp(command, MOTOR_UPDATE_ALL, MOTOR_UPDATE_ALL_LENGTH) == 0)) {
+      const uint8_t* buffer = (const uint8_t*) (command + MOTOR_UPDATE_ALL_LENGTH);
+
+      MotorMoveAllProto command_proto = MotorMoveAllProto_init_zero;
+      pb_istream_t stream = pb_istream_from_buffer(buffer, length - MOTOR_UPDATE_ALL_LENGTH - 1);
+      const bool status = pb_decode(&stream, MotorMoveAllProto_fields, &command_proto);
+      if (!status) return false;
+      UpdateMotor(command_proto.top_left);
+      UpdateMotor(command_proto.middle);
+      UpdateMotor(command_proto.top_right);
     }
+    return true;
+  }
+
+  void UpdateMotor(const MotorMoveProto &update_proto) {
+    if (update_proto.address >= NUM_MOTORS) return;
+    motors_[update_proto.address].Update(update_proto);
   }
 
  private:
