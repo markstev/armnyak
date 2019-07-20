@@ -2,6 +2,9 @@ syntax = "proto2";
 
 //package armnyak;
 
+// Regen command for python:
+// protoc --proto_path=arduino/proto --python_out=protoc arduino/proto/motor_command.proto
+
 message MotorInitProto {
   // Required?!?! Why?
   // It turns out that nanopb ignores optional fields, hence the deviation from

@@ -62,16 +62,23 @@ class MathController(object):
         rho = self.lift_motor.GetNextSpeed(camera_view.vertical_offset_radians, time_delta, 0)
         target_position = physical_map.EstimateTargetPosition(camera_view.width_radians,
                 camera_view.horiz_offset_radians, self.arm_config, arm_current)
-        desired_theta, desired_phi = physical_map.EstimateAnglesDesired(camera_view,
+        desired_theta, desired_phi = physical_map.EstimateAnglesDesired(
                 self.arm_config, arm_current, target_position)
         self.desired_theta = desired_theta
         self.desired_phi = desired_phi
         delta_theta = desired_theta - arm_current.theta
         delta_phi = desired_phi - arm_current.phi
-        # TODO: config vars
-        time_for_theta = abs(delta_theta / (math.pi / 3.0))
-        time_for_phi = abs(delta_phi / math.pi)
-        total_time = max(time_for_theta, time_for_phi)
+        return self.EvenSpeeds(delta_theta, delta_phi, 0.0)
+
+    def EvenSpeeds(self, delta_theta, delta_phi, delta_rho):
+        angle_and_gear_factors = [(delta_theta, arm_config.base_gear_factor),
+                (delta_phi, arm_config.wrist_gear_factor),
+                (delta_rho, arm_config.lift_gear_factor)]
+        times = []
+        for angle, gear in angle_and_gear_factors:
+            time_to_move = angle * gear
+            times.append(time_to_move)
+        total_time = max(times)
         def sign(x):
             if x >= 0:
                 return 1
@@ -81,5 +88,6 @@ class MathController(object):
             if total_time_to_move == 0:
                 return 0.0
             return sign(angle_change) * min(1.0, time_to_reach_angle / total_time_to_move)
-        return (speed(delta_theta, time_for_theta, total_time),
-                speed(delta_phi, time_for_phi, total_time), rho)
+        return (speed(delta_theta, times[0], total_time),
+                speed(delta_phi, times[1], total_time),
+                speed(delta_rho, times[2], total_time))

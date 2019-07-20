@@ -3,6 +3,7 @@ from protoc.motor_command_pb2 import MotorInitProto
 from protoc.motor_command_pb2 import MotorMoveProto
 from protoc.motor_command_pb2 import MotorConfigProto
 from protoc.motor_command_pb2 import MotorTareProto
+from protoc.motor_command_pb2 import MotorMoveAllProto
 import math
 import logging
 from config import ArmConfig
@@ -64,6 +65,9 @@ class Motor(object):
     return self.Move(move_proto)
 
   def MoveAbsolute(self, speed, world_radians):
+    return self.Move(self.MoveAbsoluteProto(speed, world_radians))
+
+  def MoveAbsoluteProto(self, speed, world_radians):
     """Speed should range from -1.0 to 1.0"""
     move_proto = self.CreateMoveProto()
     move_proto.max_speed = abs(speed) * 1500 * self.microsteps
@@ -73,7 +77,7 @@ class Motor(object):
     #logging.info("Move to: %d at %.02f", move_proto.absolute_steps, move_proto.max_speed)
     move_proto.use_absolute_steps = True
     self.motor_position = move_proto.absolute_steps
-    return self.Move(move_proto)
+    return move_proto
 
   def Configure(self, microsteps, max_steps, min_steps, set_zero=False):
     config_proto = MotorConfigProto()
@@ -85,6 +89,7 @@ class Motor(object):
         config_proto.ms1 = i & 0x02
         config_proto.ms2 = i & 0x04
         break
+    logging.info("Config ms0, ms1, ms2: %d, %d, %d", config_proto.ms0, config_proto.ms1, config_proto.ms2)
     config_proto.min_steps = min_steps
     config_proto.max_steps = max_steps
     config_proto.zero = set_zero
@@ -193,10 +198,39 @@ class TopLeftMotor(Motor):
 class MotorBankBase(MotorBank):
   def AddMotors(self):
     arm_config = ArmConfig()
-    self.base_motor = MiddleMotor(self.interface, arm_config.base_gear_factor)
-    self.base_motor2 = MiddleMotor(self.interface2, arm_config.base_gear_factor)
-    self.wrist_motor = MiddleMotor(self.interface, arm_config.wrist_gear_factor)
+    self.base_motor = MiddleMotor(self.interface2, arm_config.base_gear_factor)
+    #self.base_motor2 = MiddleMotor(self.interface2, arm_config.base_gear_factor)
+    self.wrist_motor = TopRightMotor(self.interface2, arm_config.wrist_gear_factor)
+    #self.wrist_tilt_motor = TopRightMotor(self.interface, arm_config.tilt_gear_factor)
     self.wrist_tilt_motor = TopLeftMotor(self.interface, arm_config.tilt_gear_factor)
     # TODO: THESE ADDRESSES ARE DUPLICATED
     self.left_grip = TopRightMotor(self.interface, arm_config.grip_gear_factor)
     self.right_grip = MiddleMotor(self.interface, arm_config.grip_gear_factor)
+    self.named_motors = {
+            "base": self.base_motor,
+            "wrist": self.wrist_motor,
+            "tilt": self.wrist_tilt_motor,
+            "left_grip": self.left_grip,
+            "right_grip": self.right_grip,
+            }
+    self.motors = self.named_motors.values()
+    for motor in self.motors:
+        motor.Configure(microsteps=1, max_steps=6000, min_steps=-6000)
+
+  def Rezero(self):
+    for motor in self.motors:
+      motor.MoveAbsolute(0.6, 0.0)
+
+  def Release(self):
+    for motor in self.motors:
+      motor.SetDisableAfterMoving(True)
+
+  def WriteMany(self, move_protos, included_motor):
+      if len(move_protos) != 3:
+          logging.error("Bad call to write many")
+      move_all_proto = MotorMoveAllProto()
+      # Positions don't actually matter. Addresses are used instead.
+      move_all_proto.top_left.CopyFrom(move_protos[0])
+      move_all_proto.middle.CopyFrom(move_protos[1])
+      move_all_proto.top_right.CopyFrom(move_protos[2])
+      included_motor.SendProto("MALL", move_all_proto)

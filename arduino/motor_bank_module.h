@@ -21,7 +21,7 @@ const char* MOTOR_CONFIG = "MCONF";
 const int MOTOR_CONFIG_LENGTH = 5;
 const char* MOTOR_TARE = "MTARE";
 const int MOTOR_TARE_LENGTH = 5;
-const char* MOTOR_UPDATE_ALL = "MUPA";
+const char* MOTOR_UPDATE_ALL = "MALL";
 const int MOTOR_UPDATE_ALL_LENGTH = 4;
 
 class MotorBankModule : public arduinoio::UCModule {

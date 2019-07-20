@@ -11,7 +11,16 @@ import math
 
 bank = MotorBankBase()
 io_reader = InputBoard()
-arm_config = ArmConfig
+io_reader.Start()
+arm_config = ArmConfig()
+arm_config.ApplyTares(bank, io_reader)
+while True:
+    s = "\n------\n"
+    for i in range(22, 32, 2):
+        s += " PIN %d = %d\n" % (i, io_reader.GetPin(i))
+
+    logging.info("RPS = %f %s", io_reader.ReadsPerSec(), s)
+    time.sleep(0.2)
 
 hand = Hand(bank, io_reader, arm_config)
 #hand.Grab()

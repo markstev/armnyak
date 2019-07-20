@@ -17,6 +17,17 @@ def NormalizeAngle(angle, start=-math.pi, end=math.pi):
         angle -= 2 * math.pi
     return angle
 
+from enum import Enum
+class ArmState(Enum):
+    HUNT = 1
+    APPROACH = 2
+    LOWER_ON_BOTTLE = 3
+    GRAB_BOTTLE = 4
+    PICK_UP_BOTTLE = 5
+    DISPENSE = 6
+    LOWER_BOTTLE = 7
+    REPLACE_BOTTLE = 8
+
 class ArmSimulator(object):
     """Simulator for a robot arm.
 
@@ -27,6 +38,7 @@ class ArmSimulator(object):
         self.enable_physical_control = False
         self.override_camera = None
         self.debug_string = ""
+        self.state = ArmState.HUNT
 
     def Configure(self, arm_config, theta_init=0, phi_init=START_PHI, rho_init=0):
         self.arm_config = arm_config
@@ -83,8 +95,11 @@ class ArmSimulator(object):
         if self.enable_physical_control and self.motor_bank is not None:
             base_angle = NormalizeAngle(-self.theta)
             wrist_angle = NormalizeAngle(-self.phi + math.pi)
-            self.motor_bank.wrist_motor.MoveAbsolute(1.0, wrist_angle)
-            self.motor_bank.base_motor.MoveAbsolute(1.0, base_angle)
+            #self.motor_bank.wrist_motor.MoveAbsolute(1.0, wrist_angle)
+            #self.motor_bank.base_motor.MoveAbsolute(1.0, base_angle)
+            self.motor_bank.wrist_motor.MoveAbsolute(abs(self.d_phi), self.target_phi)
+            self.motor_bank.base_motor.MoveAbsolute(abs(self.d_theta), self.target_theta)
+            self.motor_bank.lift_motor.MoveAbsolute(abs(self.d_rho), self.target_rho)
             self.debug_string += "---PHYSICAL--- Moving base = %.02f, wrist = %.02f" % (
                     base_angle, wrist_angle)
 
@@ -146,17 +161,30 @@ class ArmSimulator(object):
         #           self.r1_x, self.r1_y)
 
     def ControlStep(self, time, controller):
-        theta_speed, phi_speed, rho_speed = controller.Update(
-                self.GetCameraView(), self.GetArmCurrentPositions(), time)
-        if self.phi < math.pi:
-            theta_speed *= -1.0
-        #   logging.info(
-        #           "Controller update speeds: (theta, phi, rho): (%.02f, %.02f, %.02f)",
-        #           theta_speed, phi_speed, rho_speed)
-        self.debug_string += "---CONTROL---\ntheta_speed = %.02f\nphi_speed = %.02f\nrho_speed = %.02f" % (theta_speed, phi_speed, rho_speed)
-        self.SetThetaSpeed(theta_speed * 0.2)
-        self.SetPhiSpeed(phi_speed * 0.4)
-        self.SetRhoSpeed(rho_speed * 0.1)
+        if self.state == ArmState.HUNT:
+            pass
+        elif self.state == ArmState.APPROACH:
+            theta_speed, phi_speed, rho_speed = controller.Update(
+                    self.GetCameraView(), self.GetArmCurrentPositions(), time)
+            rho_speed = 1.0  # Don't want to move this evenly.
+            if self.phi < math.pi:
+                theta_speed *= -1.0
+            self.SetThetaSpeed(theta_speed * 0.2)
+            self.SetPhiSpeed(phi_speed * 0.4)
+            self.SetRhoSpeed(rho_speed * 0.1)
+            self.target_theta = controller.desired_theta
+            self.target_phi = controller.desired_phi
+            self.target_rho = self.arm_config.pickup_rho
+            self.debug_string += "---CONTROL---\ntheta_speed = %.02f\nphi_speed = %.02f\nrho_speed = %.02f" % (theta_speed, phi_speed, rho_speed)
+        elif self.state == ArmState.LOWER_ON_BOTTLE:
+            self.target_rho = arm_config.grab_rho
+            arm_settings_after_vertical = self.GetArmCurrentPositions()
+            arm_settings_after_vertical.rho = self.target_rho
+            self.target_theta, self.target_phi = physical_map.EstimateAnglesDesired(
+                    self.arm_config, arm_settings_after_vertical, 
+                    (self.r1_x, self.r1_y))
+            self.SetSpeeds(controller.EvenSpeeds(self.target_theta - self.theta, self.target_phi - self.phi, self.target_rho - self.rho))
+            # TODO: push absolutes to physical
 
     def SetDisableAfterMove(self, disable_after_moving):
         for motor in [self.motor_bank.base_motor, self.motor_bank.wrist_motor]:

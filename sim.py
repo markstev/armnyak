@@ -11,6 +11,7 @@ import motor2
 import json
 import time
 import config
+import cgi
 
 #root = logging.getLogger()
 #root.setLevel(logging.DEBUG)
@@ -26,10 +27,10 @@ PORT = 8000
 
 controller = MathController(arm_config)
 bank = motor2.MotorBankBase()
-bank.wrist_motor.Configure(microsteps=4, max_steps=1600, min_steps=-1600)
-bank.base_motor.Configure(microsteps=2,
-        max_steps=int(bank.base_motor.StepsPerRadian() * math.pi / 2),
-        min_steps=int(-bank.base_motor.StepsPerRadian() * math.pi / 2))
+#bank.wrist_motor.Configure(microsteps=4, max_steps=1600, min_steps=-1600)
+#bank.base_motor.Configure(microsteps=2,
+#        max_steps=int(bank.base_motor.StepsPerRadian() * math.pi / 2),
+#        min_steps=int(-bank.base_motor.StepsPerRadian() * math.pi / 2))
 simulator.SendCoordsToMotorBank(bank)
 #simulator.Simulate(0.1, 0.2, total_time=1, controller=controller)
 
@@ -83,6 +84,22 @@ class MyRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
         self.wfile.write("ok")
 
     def do_POST(self):
+        if self.path in ('/debug.html'):
+            form = cgi.FieldStorage(
+                fp=self.rfile,
+                headers=self.headers,
+                environ={'REQUEST_METHOD': 'POST'}
+                )
+            for name, motor in bank.named_motors.iteritems():
+                form_value = form.getvalue(name)
+                if form_value:
+                    try:
+                        logging.info("Moving %s", name)
+                        position = float(form_value)
+                        motor.MoveAbsolute(0.6, position)
+                    except ValueError:
+                        logging.info("Can't move to %s", form_value)
+            return SimpleHTTPServer.SimpleHTTPRequestHandler.do_GET(self)
         start = time.time()
         self.data_string = self.rfile.read(int(self.headers['Content-Length']))
         #Example:

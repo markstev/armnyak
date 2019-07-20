@@ -43,7 +43,7 @@ message("SRCS ARE " ${motor_controller_SRCS})
 set(${FIRMWARE_NAME}_HDRS   ${PROTO_HDRS})
 
 set(${FIRMWARE_NAME}_PORT /dev/ttyACM1)            # Serial upload port
-#set(${FIRMWARE_NAME}_PORT /dev/ttyACM2)            # Serial upload port
+#set(${FIRMWARE_NAME}_PORT /dev/ttyACM0)            # Serial upload port
 
 #====================================================================#
 #  Target generation                                                 #

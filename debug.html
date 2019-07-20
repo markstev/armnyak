@@ -14,6 +14,17 @@
     <button onclick="fetch('/toggle_physical')">Toggle Physical</button>
     <button onclick="fetch('/enable_after_move')">Hold Steppers When Still</button>
     <button onclick="fetch('/disable_after_move')">Release Steppers When Still</button>
+    <br />
+    <form action='/debug.html' method='post'>
+      Base<input type="text" name="base"></input>
+      Lift<input type="text" name="lift"></input>
+      Wrist<input type="text" name="wrist"></input>
+      Tilt<input type="text" name="tilt"></input>
+      Left Grip<input type="text" name="left_grip"></input>
+      Right Grip<input type="text" name="right_grip"></input>
+      <input type="submit">Move to Absolute Positions</input>
+    </form>
+    <br />
     <button onclick="fetch('/pause')">Pause</button>
     <button onclick="fetch('/quitquitquit')">QuitQuitQuit</button>
 		<script src="three.js"></script>

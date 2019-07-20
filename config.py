@@ -1,10 +1,13 @@
 import collections
+import math
 
 # Units are cm, radians, and seconds
 
 class ArmConfig(object):
     def __init__(self):
-        self.r0 = 12 * 2.54
+        self.r0_flat = 2 * 2.54
+        self.r0_pivot = 10 * 2.54
+        self.r0 = self.r0_flat + self.r0_pivot
         self.r1_camera = 10 * 2.54
         self.r1_grab = 13 * 2.54
 
@@ -14,8 +17,22 @@ class ArmConfig(object):
         self.lift_gear_factor = 80
         self.wrist_gear_factor = 7 * 2
 
-        self.tilt_gear_factor = 7
+        self.tilt_gear_factor = 7 * 2
         self.grip_gear_factor = 1
+
+        self.pickup_rho = math.pi / 6
+        self.grab_rho = 0.174533
+        self.dispens_rho = math.pi / 2
+
+    def ApplyTares(self, motor_bank, input_board):
+        #AddTare(MOTOR, PIN, POSITION)
+        Tare = collections.namedtuple('Tare', 'motor pin trigger_value world_radians')
+        tares = [Tare(motor_bank.wrist_tilt_motor, 22, False, -math.pi),
+                ]
+        for tare in tares:
+            input_board.RegisterCallback(tare.pin, tare.trigger_value,
+                    lambda: tare.motor.Tare(tare.world_radians),
+                    permanent=True)
 
 CameraView = collections.namedtuple('CameraView', 'horiz_offset_radians width_radians vertical_offset_radians')
 

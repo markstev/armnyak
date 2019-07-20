@@ -9,21 +9,20 @@ def WidthToDistance(width_radians):
 
 def EstimateTargetPosition(width_radians, horiz_offset_radians, arm_config, arm_current_settings):
     d = WidthToDistance(width_radians)
-    r0 = arm_config.r0
+    r0_pivot = arm_config.r0_pivot
+    r0_flat = arm_config.r0_flat
     r1 = arm_config.r1_camera
     theta = arm_current_settings.theta
     phi = arm_current_settings.phi
     rho = arm_current_settings.rho
     phi_vs_horizon = phi - math.pi + theta
-    tx = r0 * math.cos(theta) * math.cos(rho) + r1 * math.cos(phi_vs_horizon) + d * math.cos(phi_vs_horizon + horiz_offset_radians)
-    ty = r0 * math.sin(theta) * math.cos(rho) + r1 * math.sin(phi_vs_horizon) + d * math.sin(phi_vs_horizon + horiz_offset_radians)
+    tx = r0_pivot * math.cos(theta) * math.cos(rho) + r0_flat * math.cos(theta) + r1 * math.cos(phi_vs_horizon) + d * math.cos(phi_vs_horizon + horiz_offset_radians)
+    ty = r0_pivot * math.sin(theta) * math.cos(rho) + r0_flat * math.sin(theta) + r1 * math.sin(phi_vs_horizon) + d * math.sin(phi_vs_horizon + horiz_offset_radians)
     return (tx, ty)
 
-def EstimateAnglesDesired(camera_view, arm_config, arm_current_settings, target_position):
-    width_radians = camera_view.width_radians
-    horiz_offset_radians = camera_view.horiz_offset_radians
+def EstimateAnglesDesired(arm_config, arm_current_settings, target_position):
     tx, ty = target_position
-    r0 = arm_config.r0
+    r0 = arm_config.r0_pivot * math.cos(arm_current_settings.rho) + arm_config.r0_flat
     r1 = arm_config.r1_grab
     t = math.sqrt(tx * tx + ty * ty)
     max_arm_grab_length = arm_config.r1_grab + r0
