@@ -1,6 +1,31 @@
 import math
 import physical_map
 import config
+import logging
+
+
+def EvenSpeeds(arm_config, delta_theta, delta_phi, delta_rho):
+    angle_and_gear_factors = [(delta_theta, arm_config.base_gear_factor),
+            (delta_phi, arm_config.wrist_gear_factor),
+            (delta_rho, arm_config.lift_gear_factor)]
+    times = []
+    for angle, gear in angle_and_gear_factors:
+        time_to_move = abs(angle) * gear
+        times.append(time_to_move)
+        logging.info("Time: %f", time_to_move)
+    total_time = max(times)
+    def sign(x):
+        if x >= 0:
+            return 1
+        else:
+            return -1
+    def speed(angle_change, time_to_reach_angle, total_time_to_move):
+        if total_time_to_move == 0:
+            return 0.0
+        return sign(angle_change) * min(1.0, time_to_reach_angle / total_time_to_move)
+    return (speed(delta_theta, times[0], total_time),
+            speed(delta_phi, times[1], total_time),
+            speed(delta_rho, times[2], total_time))
 
 class MotorController(object):
     def __init__(self, m, b):
@@ -68,26 +93,4 @@ class MathController(object):
         self.desired_phi = desired_phi
         delta_theta = desired_theta - arm_current.theta
         delta_phi = desired_phi - arm_current.phi
-        return self.EvenSpeeds(delta_theta, delta_phi, 0.0)
-
-    def EvenSpeeds(self, delta_theta, delta_phi, delta_rho):
-        angle_and_gear_factors = [(delta_theta, arm_config.base_gear_factor),
-                (delta_phi, arm_config.wrist_gear_factor),
-                (delta_rho, arm_config.lift_gear_factor)]
-        times = []
-        for angle, gear in angle_and_gear_factors:
-            time_to_move = angle * gear
-            times.append(time_to_move)
-        total_time = max(times)
-        def sign(x):
-            if x >= 0:
-                return 1
-            else:
-                return -1
-        def speed(angle_change, time_to_reach_angle, total_time_to_move):
-            if total_time_to_move == 0:
-                return 0.0
-            return sign(angle_change) * min(1.0, time_to_reach_angle / total_time_to_move)
-        return (speed(delta_theta, times[0], total_time),
-                speed(delta_phi, times[1], total_time),
-                speed(delta_rho, times[2], total_time))
+        return EvenSpeeds(self.arm_config, delta_theta, delta_phi, 0.0)

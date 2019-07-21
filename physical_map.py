@@ -39,3 +39,16 @@ def EstimateAnglesDesired(arm_config, arm_current_settings, target_position):
     phi_target = 2 * math.pi - (math.pi - r0_t_angle_target - r1_t_angle_target)
     theta_target = numpy.arctan2(ty, tx) - r0_t_angle_target
     return (theta_target, phi_target)
+
+
+def GetGrabPosition(arm_config, arm_current_settings):
+    theta = arm_current_settings.theta
+    phi = arm_current_settings.phi
+    rho = arm_current_settings.rho
+    grab_x = (arm_config.r0_pivot * math.cos(theta) * math.cos(rho) +
+            arm_config.r0_flat * math.cos(theta) +
+            arm_config.r1_grab * math.cos(phi - math.pi + theta))
+    grab_y = (arm_config.r0_pivot * math.sin(theta) * math.cos(rho) +
+            arm_config.r0_flat * math.sin(theta) +
+            arm_config.r1_grab * math.sin(phi - math.pi + theta))
+    return (grab_x, grab_y)

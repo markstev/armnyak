@@ -5,6 +5,7 @@ import random
 from config import ArmConfig, ArmCurrentSettings, CameraView
 import physical_map
 import collections
+from controller import EvenSpeeds
 
 START_PHI = math.pi * 1.2
 # CCW is positive for both phi and theta
@@ -183,7 +184,7 @@ class ArmSimulator(object):
             self.target_theta, self.target_phi = physical_map.EstimateAnglesDesired(
                     self.arm_config, arm_settings_after_vertical, 
                     (self.r1_x, self.r1_y))
-            self.SetSpeeds(controller.EvenSpeeds(self.target_theta - self.theta, self.target_phi - self.phi, self.target_rho - self.rho))
+            self.SetSpeeds(EvenSpeeds(self.target_theta - self.theta, self.target_phi - self.phi, self.target_rho - self.rho))
             # TODO: push absolutes to physical
 
     def SetDisableAfterMove(self, disable_after_moving):

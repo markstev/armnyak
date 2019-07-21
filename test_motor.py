@@ -12,10 +12,10 @@ final_wait = 1000
 max_wait = 4000
 temp_pin_threshold = 20
 
-bank= MotorBankBase()
+bank = MotorBankBase()
 start = time.time()
-bank.wrist_motor.Configure(microsteps=1, max_steps=1600, min_steps=-1600)
-bank.base_motor.Configure(microsteps=1, max_steps=32000, min_steps=-32000)
+#bank.wrist_motor.Configure(microsteps=1, max_steps=1600, min_steps=-1600)
+#bank.base_motor.Configure(microsteps=1, max_steps=32000, min_steps=-32000)
 stop = time.time()
 logging.info("msec to push update = %f", (stop - start) * 1000.0)
 def calibrate_base(bank):
@@ -82,23 +82,24 @@ def calibrate_wrist(bank):
 #   bank.wrist_motor.MoveAbsolute(0.6, -math.pi / 4)
 #bank.wrist_motor.MoveRelative(-0.5)
 
-bank.left_grip.Configure(microsteps=1, max_steps=600000, min_steps=-600000)
-bank.right_grip.Configure(microsteps=1, max_steps=600000, min_steps=-600000)
-bank.left_grip.SetDisableAfterMoving(False)
-bank.right_grip.SetDisableAfterMoving(False)
-bank.left_grip.MoveAbsolute(0.6, -0.5 * math.pi)
-bank.right_grip.MoveAbsolute(0.6, 0.5 * math.pi)
+#bank.left_grip.Configure(microsteps=1, max_steps=600000, min_steps=-600000)
+#bank.right_grip.Configure(microsteps=1, max_steps=600000, min_steps=-600000)
+#bank.left_grip.SetDisableAfterMoving(False)
+#bank.right_grip.SetDisableAfterMoving(False)
+#bank.left_grip.MoveAbsolute(0.6, -0.5 * math.pi)
+#bank.right_grip.MoveAbsolute(0.6, 0.5 * math.pi)
 
 forward = -1.0
-for i in range(8, 10):
+for i in range(9, 10):
   forward *= -1
   steps = 4000
-  bank.base_motor.Configure(microsteps=1, max_steps=600000, min_steps=-600000)
+  #bank.base_motor.Configure(microsteps=1, max_steps=600000, min_steps=-600000)
   #bank.base_motor2.Configure(microsteps=1, max_steps=600000, min_steps=-600000)
-  bank.wrist_motor.Configure(microsteps=1, max_steps=600000, min_steps=-600000)
-  bank.wrist_tilt_motor.Configure(microsteps=1, max_steps=600000, min_steps=-600000)
-  bank.wrist_tilt_motor.SetDisableAfterMoving(False)
-  bank.wrist_motor.MoveAbsolute(0.6, forward * math.pi * .2)
+  #bank.wrist_motor.Configure(microsteps=1, max_steps=600000, min_steps=-600000)
+  #bank.wrist_tilt_motor.Configure(microsteps=1, max_steps=600000, min_steps=-600000)
+  #bank.wrist_tilt_motor.SetDisableAfterMoving(False)
+  # Negative on the wrist is left
+  bank.wrist_motor.MoveAbsolute(0.4, forward * math.pi * 0.3)
   #f forward > 0:
   #   #bank.wrist_tilt_motor.MoveAbsolute(0.6, -forward * math.pi * 1.2)
   #   #bank.base_motor.MoveAbsolute(0.6, forward * math.pi / 6)
@@ -116,16 +117,16 @@ for i in range(8, 10):
   #bank.base_motor.MoveAbsolute(1.0, forward * math.pi * 2.0)
   time.sleep(1.5)
 
-forward *= -1
-for i in range(8, 8):
-  forward *= -1
-  # Negative is in
-  logging.info("Grip moving: %f", forward)
-  bank.left_grip.SetDisableAfterMoving(False)
-  bank.right_grip.SetDisableAfterMoving(False)
-  bank.left_grip.MoveAbsolute(0.6, 0.5 * forward * math.pi)
-  bank.right_grip.MoveAbsolute(0.6, -0.5 * forward * math.pi)
-  time.sleep(2)
+#   forward *= -1
+#   for i in range(8, 8):
+#     forward *= -1
+#     # Negative is in
+#     logging.info("Grip moving: %f", forward)
+#     bank.left_grip.SetDisableAfterMoving(False)
+#     bank.right_grip.SetDisableAfterMoving(False)
+#     bank.left_grip.MoveAbsolute(0.6, 0.5 * forward * math.pi)
+#     bank.right_grip.MoveAbsolute(0.6, -0.5 * forward * math.pi)
+#     time.sleep(2)
 
 ###   move_proto = MotorMoveProto()
 ###   move_proto.address = 1

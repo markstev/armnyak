@@ -72,6 +72,8 @@ class Motor {
     max_speed_ = move_proto.max_speed;
     if (move_proto.use_absolute_steps) {
       target_absolute_steps_ = max(min_steps_, min(max_steps_, move_proto.absolute_steps));
+    } else if (move_proto.max_speed == 0.0) {
+      target_absolute_steps_ = current_absolute_steps_;
     } else {
       if (move_proto.direction) {
         target_absolute_steps_ = max(min_steps_, min(max_steps_, move_proto.steps + current_absolute_steps_));
@@ -80,8 +82,10 @@ class Motor {
       }
     }
     const float acceleration = max_speed_;
-    UpdateSpeed(min_speed_, max_speed_, current_speed_steps_per_second_, kAcceleration,
-        StepsRemaining(), &current_speed_steps_per_second_, &current_wait_);
+    if (move_proto.max_speed != 0.0) {
+      UpdateSpeed(min_speed_, max_speed_, current_speed_steps_per_second_, kAcceleration,
+          StepsRemaining(), &current_speed_steps_per_second_, &current_wait_);
+    }
     digitalWrite(init_proto_.dir_pin, Direction());
     disable_after_moving_ = move_proto.disable_after_moving;
     next_step_in_usec_ = 0;

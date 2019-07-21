@@ -5,6 +5,7 @@ import logging
 import threading
 import time
 import collections
+from threading import Lock
 
 PinCallback = collections.namedtuple('PinCallback', 'pin trigger_value callback permanent')
 
@@ -72,6 +73,7 @@ class InputBoard(object):
         self.pin_values = [0, 0]
         self.callbacks = {}
         self.reads = 0
+        self.write_mutex = Lock()
 
     def Start(self):
         self.thread.start()
@@ -93,7 +95,7 @@ class InputBoard(object):
             message = self.reader.Read()
             if message:
                 self.reads += 1
-                last_pin_values = last(self.pin_values)
+                last_pin_values = list(self.pin_values)
                 self.pin_values[0] = message.read_bits_0
                 self.pin_values[1] = message.read_bits_1
                 #if message.dist_cm < 500:
@@ -101,19 +103,24 @@ class InputBoard(object):
                     #logging.info("DIST CM = %.02f   ENCODER = %d", message.dist_cm, -42)#message.encoder_0_count)
                     pass
                 callbacks_to_delete = []
-                for pin, pin_callback in self.callbacks.iteritems():
-                    pin_value = self.GetPin(pin) 
-                    if (pin_value == pin_callback.trigger_value and
-                            # Only trigger on change.
-                            pin_value != self.GetPinInternal(pin, last_pin_values)):
-                        pin_callback.callback()
-                        if not pin_callback.permanent:
-                            callbacks_to_delete.append(pin)
-                for cb in callbacks_to_delete:
-                    del self.callbacks[cb]
+                with self.write_mutex:
+                    for pin, pin_callback in self.callbacks.iteritems():
+                        pin_value = self.GetPin(pin) 
+                        if (pin_value == pin_callback.trigger_value and
+                                # Only trigger on change.
+                                pin_value != self.GetPinInternal(pin, last_pin_values)):
+                            pin_callback.callback()
+                            if not pin_callback.permanent:
+                                callbacks_to_delete.append(pin)
+                            #logging.info("TRIGGER: %d from %d to %d", pin, self.GetPinInternal(pin, last_pin_values), pin_value)
+                        #else:
+                        #   logging.info("Not triggering: %d from %d to %d", pin, self.GetPinInternal(pin, last_pin_values), pin_value)
+                    for cb in callbacks_to_delete:
+                        del self.callbacks[cb]
 
     def RegisterCallback(self, pin, trigger_value, callback, permanent=False):
-        self.callbacks[pin] = PinCallback(pin, trigger_value, callback, permanent)
+        with self.write_mutex:
+            self.callbacks[pin] = PinCallback(pin, trigger_value, callback, permanent)
 
 
 #   read_proto = IOReadProto()

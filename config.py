@@ -5,24 +5,27 @@ import math
 
 class ArmConfig(object):
     def __init__(self):
-        self.r0_flat = 2 * 2.54
-        self.r0_pivot = 10 * 2.54
+        self.r0_flat = 6 * 2.54
+        self.r0_pivot = 12 * 2.54
         self.r0 = self.r0_flat + self.r0_pivot
-        self.r1_camera = 10 * 2.54
-        self.r1_grab = 13 * 2.54
+        self.r1_camera = 1 * 2.54
+        # Distance from pivot to grab area.
+        self.r1_grab = 5.5 * 2.54
 
-        self.target_width = 10
+        self.target_width = 3 * 2.54
 
         self.base_gear_factor = 39.27
-        self.lift_gear_factor = 80
+        self.lift_gear_factor = 80 * 2
         self.wrist_gear_factor = 7 * 2
 
         self.tilt_gear_factor = 7 * 2
         self.grip_gear_factor = 1
 
-        self.pickup_rho = math.pi / 6
-        self.grab_rho = 0.174533
-        self.dispens_rho = math.pi / 2
+        self.pickup_rho = math.pi / 3
+        self.grab_rho = 0.349066
+        self.dispense_rho = math.pi / 2
+        self.bottle_bumper_pin = 26
+        self.lift_switch_pin = 32
 
     def ApplyTares(self, motor_bank, input_board):
         #AddTare(MOTOR, PIN, POSITION)

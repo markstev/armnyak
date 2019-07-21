@@ -18,7 +18,7 @@ board = io_read.InputBoard()
 board.Start()
 while True:
     s = "\n------\n"
-    for i in range(22, 32, 2):
+    for i in range(22, 34, 2):
         s += " PIN %d = %d\n" % (i, board.GetPin(i))
 
     logging.info("RPS = %f %s", board.ReadsPerSec(), s)

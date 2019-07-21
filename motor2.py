@@ -7,6 +7,7 @@ from protoc.motor_command_pb2 import MotorMoveAllProto
 import math
 import logging
 from config import ArmConfig
+import time
 
 class MotorBank(object):
   def __init__(self):
@@ -27,6 +28,9 @@ class Motor(object):
     self.steps_per_rotation = 200  # for the motor, not the output.
     self.gear_factor = gear_factor
     self.motor_position = 0
+
+  def CurrentPosition(self):
+    return self.motor_position / self.StepsPerRadian()
 
   def Move(self, motor_move_proto):
     self.SendProto("MUP", motor_move_proto)
@@ -64,6 +68,9 @@ class Motor(object):
         self.motor_position -= move_proto.steps
     return self.Move(move_proto)
 
+  def Stop(self):
+      return self.MoveRelative(0.0)
+
   def MoveAbsolute(self, speed, world_radians):
     return self.Move(self.MoveAbsoluteProto(speed, world_radians))
 
@@ -100,8 +107,10 @@ class Motor(object):
     tare_proto = MotorTareProto()
     tare_proto.address = self.address
     tare_proto.tare_to_steps = int(world_radians * self.StepsPerRadian())
-    logging.info("Tare to %d", tare_proto.tare_to_steps)
+    self.motor_position = tare_proto.tare_to_steps
+    start = time.time()
     self.SendProto("MTARE", tare_proto)
+    logging.info("Tare to %d took %f seconds.", tare_proto.tare_to_steps, time.time() - start)
 
   def SendProto(self, name, proto):
     serialized = proto.SerializeToString()
@@ -199,16 +208,16 @@ class MotorBankBase(MotorBank):
   def AddMotors(self):
     arm_config = ArmConfig()
     self.base_motor = MiddleMotor(self.interface2, arm_config.base_gear_factor)
-    #self.base_motor2 = MiddleMotor(self.interface2, arm_config.base_gear_factor)
     self.wrist_motor = TopRightMotor(self.interface2, arm_config.wrist_gear_factor)
-    #self.wrist_tilt_motor = TopRightMotor(self.interface, arm_config.tilt_gear_factor)
+    self.lift_motor = TopLeftMotor(self.interface2, arm_config.lift_gear_factor)
+
     self.wrist_tilt_motor = TopLeftMotor(self.interface, arm_config.tilt_gear_factor)
-    # TODO: THESE ADDRESSES ARE DUPLICATED
     self.left_grip = TopRightMotor(self.interface, arm_config.grip_gear_factor)
     self.right_grip = MiddleMotor(self.interface, arm_config.grip_gear_factor)
     self.named_motors = {
             "base": self.base_motor,
             "wrist": self.wrist_motor,
+            "lift": self.lift_motor,
             "tilt": self.wrist_tilt_motor,
             "left_grip": self.left_grip,
             "right_grip": self.right_grip,
