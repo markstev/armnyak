@@ -11,13 +11,20 @@ class Hand(object):
         self.motor_bank.wrist_tilt_motor.SetDisableAfterMoving(False)
 
     def Calibrate(self):
-        pass
+        self.motor_bank.wrist_tilt_motor.MoveAbsolute(0.5, -math.pi * 1.5)
+        def StopWrist():
+            logging.info("Stop wrist.")
+            self.motor_bank.wrist_tilt_motor.Stop()
+            self.motor_bank.wrist_tilt_motor.Tare(-math.pi * 1.1)
+            self.motor_bank.wrist_tilt_motor.MoveAbsolute(1.0, 0.0)
+        self.io_reader.RegisterCallback(self.arm_config.wrist_tilt_hall_pin, False,
+                StopWrist, permanent=False)
 
     def Dispense(self):
-        self.motor_bank.wrist_motor.MoveAbsolute(0.4, math.pi / 4.0)
-        time.sleep(0.5)
+        self.motor_bank.wrist_motor.MoveAbsolute(0.4, -math.pi / 3.0)
+        time.sleep(0.75)
         self.motor_bank.wrist_tilt_motor.MoveAbsolute(0.6, -math.pi * 0.7)
-        time.sleep(1.75)
+        time.sleep(2.50)
         self.motor_bank.wrist_tilt_motor.MoveAbsolute(0.6, -math.pi * 0.0)
         #time.sleep(1)
         #self.motor_bank.wrist_tilt_motor.MoveAbsolute(0.2, math.pi * 0.05)
@@ -33,6 +40,8 @@ class Hand(object):
         self.motor_bank.left_grip.MoveAbsolute(1.0, -0.5 * math.pi)
         self.motor_bank.right_grip.MoveAbsolute(1.0, 0.5 * math.pi)
 
+    def Rotate(self, angle):
+        self.motor_bank.wrist_motor.MoveAbsolute(1.0, angle)
     def Grab(self):
         self.motor_bank.left_grip.SetDisableAfterMoving(False)
         self.motor_bank.right_grip.SetDisableAfterMoving(False)
@@ -56,11 +65,12 @@ class Hand(object):
         time.sleep(1.0)
 
     def Release(self):
+        self.motor_bank.left_grip.Tare(0.0)
+        self.motor_bank.right_grip.Tare(0.0)
         self.motor_bank.left_grip.SetDisableAfterMoving(True)
         self.motor_bank.right_grip.SetDisableAfterMoving(True)
-        self.motor_bank.left_grip.MoveAbsolute(1.0, self.grab_amount)
-        self.motor_bank.right_grip.MoveAbsolute(1.0, -self.grab_amount)
-        time.sleep(5)
+        self.motor_bank.left_grip.MoveAbsolute(1.0, self.grab_amount * 0.75)
+        self.motor_bank.right_grip.MoveAbsolute(1.0, -self.grab_amount * 0.75)
         self.RecalibrateGrabber()
 
     def RecalibrateGrabber(self):

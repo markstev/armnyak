@@ -14,6 +14,61 @@
     <button onclick="fetch('/toggle_physical')">Toggle Physical</button>
     <button onclick="fetch('/enable_after_move')">Hold Steppers When Still</button>
     <button onclick="fetch('/disable_after_move')">Release Steppers When Still</button>
+    HELLO
+    <button onclick="fetch('/calibrate_all', {
+            method: 'POST',
+            headers: {
+                        'Content-Type': 'application/json',
+                                    // 'Content-Type': 'application/x-www-form-urlencoded',
+           },})">Calibrate</button>
+    <button onclick="fetch('/go_to_position', {
+            method: 'POST',
+            headers: {
+                        'Content-Type': 'application/json',
+                                    // 'Content-Type': 'application/x-www-form-urlencoded',
+           },})">Go To Pickup Position</button>
+    <button onclick="fetch('/lower_onto_bottle', {
+            method: 'POST',
+            headers: {
+                        'Content-Type': 'application/json',
+                                    // 'Content-Type': 'application/x-www-form-urlencoded',
+           },})">Lower Onto Bottle</button>
+    <button onclick="fetch('/grab', {
+            method: 'POST',
+            headers: {
+                        'Content-Type': 'application/json',
+                                    // 'Content-Type': 'application/x-www-form-urlencoded',
+           },})">Grab</button>
+    <button onclick="fetch('/raise_and_dispense', {
+            method: 'POST',
+            headers: {
+                        'Content-Type': 'application/json',
+                                    // 'Content-Type': 'application/x-www-form-urlencoded',
+           },})">Raise and Dispense</button>
+    <button onclick="fetch('/reset', {
+            method: 'POST',
+            headers: {
+                        'Content-Type': 'application/json',
+                                    // 'Content-Type': 'application/x-www-form-urlencoded',
+           },})">Return after Dropoff</button>
+    <button onclick="fetch('/full_pickup_routine', {
+            method: 'POST',
+            headers: {
+                        'Content-Type': 'application/json',
+                                    // 'Content-Type': 'application/x-www-form-urlencoded',
+           },})">FullPickupRoutine</button>
+    <button onclick="fetch('/rezero', {
+            method: 'POST',
+            headers: {
+                        'Content-Type': 'application/json',
+                                    // 'Content-Type': 'application/x-www-form-urlencoded',
+           },})">Release and Rezero</button>
+    <button onclick="fetch('/toggle_tracker', {
+            method: 'POST',
+            headers: {
+                        'Content-Type': 'application/json',
+                                    // 'Content-Type': 'application/x-www-form-urlencoded',
+           },})">Toggle Tracker</button>
     <br />
     <form action='/debug.html' method='post'>
       Base<input type="text" name="base"></input>
@@ -100,28 +155,28 @@
 				renderer.render( scene, camera );
 			};
 
-      setInterval(() => {
-        fetch('/values')
-          .then(response => response.json())
-          .then(data=>{
-            console.log(data);
-            console.log(data['r0_x']);
-            arm0.position.set(data.r0_x / 100, data.r0_y / 100, data.r0_z / 100);
-            arm1.position.set(data.r1_x / 100, data.r1_y / 100, data.r0_z / 100);
-            target.position.set(data.target_x / 100, data.target_y / 100, data.target_z / 100);
-            est_target.position.set(data.target_est_x / 100, data.target_est_y / 100, 0);
-            plan_r0.position.set(data.plan_r0_x / 100, data.plan_r0_y / 100, 0);
-            plan_r1.position.set(data.plan_r1_x / 100, data.plan_r1_y / 100, 0);
-            v_r0.x = data.r0_x / 100;
-            v_r0.y = data.r0_y / 100;
-            v_r0.z = data.r0_z / 100;
-            v_r1.x = data.r1_x / 100;
-            v_r1.y = data.r1_y / 100;
-            v_r1.z = data.r0_z / 100;
-            arm_line.geometry.verticesNeedUpdate = true;
-            document.getElementById("debug_string").innerHTML = data.debug_string;
-          });
-      }, 100);
+      //setInterval(() => {
+      //  fetch('/values')
+      //    .then(response => response.json())
+      //    .then(data=>{
+      //      console.log(data);
+      //      console.log(data['r0_x']);
+      //      arm0.position.set(data.r0_x / 100, data.r0_y / 100, data.r0_z / 100);
+      //      arm1.position.set(data.r1_x / 100, data.r1_y / 100, data.r0_z / 100);
+      //      target.position.set(data.target_x / 100, data.target_y / 100, data.target_z / 100);
+      //      est_target.position.set(data.target_est_x / 100, data.target_est_y / 100, 0);
+      //      plan_r0.position.set(data.plan_r0_x / 100, data.plan_r0_y / 100, 0);
+      //      plan_r1.position.set(data.plan_r1_x / 100, data.plan_r1_y / 100, 0);
+      //      v_r0.x = data.r0_x / 100;
+      //      v_r0.y = data.r0_y / 100;
+      //      v_r0.z = data.r0_z / 100;
+      //      v_r1.x = data.r1_x / 100;
+      //      v_r1.y = data.r1_y / 100;
+      //      v_r1.z = data.r0_z / 100;
+      //      arm_line.geometry.verticesNeedUpdate = true;
+      //      document.getElementById("debug_string").innerHTML = data.debug_string;
+      //    });
+      //}, 100);
 			animate();
 		</script>
 	</body>

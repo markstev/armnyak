@@ -18,6 +18,9 @@ import cgi
 
 simulator = ArmSimulator()
 arm_config = config.ArmConfig()
+#   io_reader = InputBoard()
+#   io_reader.Start()
+#   arm_config.ApplyTares(bank, io_reader)
 simulator.Configure(config.ArmConfig())
 simulator.SetTargetAbsolute(math.pi / 3,  arm_config.r0 + arm_config.r1_camera, arm_config.target_width, 7)
 
