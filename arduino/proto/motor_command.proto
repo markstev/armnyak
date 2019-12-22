@@ -1,5 +1,7 @@
 syntax = "proto2";
 
+import "nanopb.proto";
+
 //package armnyak;
 
 // Regen command for python:
@@ -43,9 +45,9 @@ message MotorConfigProto {
 }
 
 message MotorMoveAllProto {
-  required MotorMoveProto top_left = 1;
-  required MotorMoveProto middle = 2;
-  required MotorMoveProto top_right = 3;
+  repeated MotorMoveProto motors = 1 [(nanopb).max_count = 8, (nanopb).fixed_count = true];
+  //required MotorMoveProto middle = 2;
+  //required MotorMoveProto top_right = 3;
 }
 
 message MotorTareProto {

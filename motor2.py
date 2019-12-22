@@ -8,16 +8,20 @@ import math
 import logging
 from config import ArmConfig
 import time
+from collections import namedtuple
 from threading import Lock
 
 class MotorBank(object):
-  def __init__(self):
+  def __init__(self, block_mode=False):
     baud = 9600
     device_basename = "ttyACM0"
     self.interface = serial_control.SerialInterface(device_basename, baud=baud)
     device_basename = "ttyACM1"
     self.interface2 = serial_control.SerialInterface(device_basename, baud=baud)
-    self.AddMotors()
+    if block_mode:
+        self.AddNewMotors()
+    else:
+        self.AddMotors()
 
 class Motor(object):
   def __init__(self, interface, gear_factor, hardware_direction=True):
@@ -87,7 +91,7 @@ class Motor(object):
     """Speed should range from -1.0 to 1.0"""
     with self.write_mutex:
         move_proto = self.CreateMoveProto()
-        move_proto.max_speed = abs(speed) * 1500 * self.microsteps
+        move_proto.max_speed = abs(speed) * self.StepsPerSecond()
         move_proto.min_speed = 100
         move_proto.absolute_steps = int(world_radians * self.StepsPerRadian())
         logging.info("%s moving to: %d = %f * %f at %f", self.name, move_proto.absolute_steps, world_radians, self.StepsPerRadian(), move_proto.max_speed)
@@ -147,7 +151,7 @@ class Motor(object):
     self.interface.Write(0, command)
 
   def StepsPerSecond(self):
-    return 1500 * self.microsteps
+    return 3000 * self.microsteps
 
   def AngularRotationPerSecond(self):
     return self.StepsPerSecond() / self.StepsPerRadian()
@@ -227,6 +231,43 @@ class TopLeftMotor(Motor):
     return motor_init
 
 
+class StepperBoardMotorMaps(object):
+    def __init__(self):
+        MotorPins = namedtuple('MotorPins', ['enable', 'dir', 'step'])
+        self.motors = (
+                MotorPins(22, 23, 24),
+                MotorPins(25, 26, 27),  # Motor #1, if #0 is closest to the arduino hat.
+                MotorPins(39, 38, 37),
+                MotorPins(36, 35, 34),
+                MotorPins(45, 44, 43),
+                MotorPins(42, 41, 40),
+                MotorPins(28, 29, 30),
+                MotorPins(31, 32, 33),
+                )
+
+    def ConfigureProto(self, motor_init):
+        mp = self.motors[motor_init.address]
+        motor_init.enable_pin = mp.enable
+        motor_init.dir_pin = mp.dir
+        motor_init.step_pin = mp.step
+        motor_init.ms0_pin = 0
+        motor_init.ms1_pin = 0
+        motor_init.ms2_pin = 0
+
+SB_MAP = StepperBoardMotorMaps()
+
+class SBMotor(Motor):
+  def __init__(self, interface, address, gear_factor, hardware_direction=True):
+      self.address = address
+      super(SBMotor, self).__init__(interface, gear_factor, hardware_direction)
+
+  def InitProto(self):
+    motor_init = MotorInitProto()
+    motor_init.address = self.address
+    SB_MAP.ConfigureProto(motor_init)
+    return motor_init
+
+
 class MotorBankBase(MotorBank):
   def AddMotors(self):
     arm_config = ArmConfig()
@@ -248,6 +289,17 @@ class MotorBankBase(MotorBank):
     self.motors = self.named_motors.values()
     for name, motor in self.named_motors.iteritems():
         motor.Configure(microsteps=1, max_steps=60000, min_steps=-60000, name=name)
+
+  def AddNewMotors(self):
+    """Can be used instead of AddMotors for the new large-size stepper controllers."""
+    arm_config = ArmConfig()
+    self.named_motors = {}
+    for i in range(8):
+        motor = SBMotor(self.interface, i, arm_config.base_gear_factor, hardware_direction=True)
+        self.named_motors["MOTOR_%d" % i] = motor
+    self.motors = self.named_motors.values()
+    for name, motor in self.named_motors.iteritems():
+        motor.Configure(microsteps=1, max_steps=60000, min_steps=-60000, name=name, set_zero=True)
 
   def Rezero(self):
     self.Release()

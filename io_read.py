@@ -53,6 +53,7 @@ class Reader(object):
         config_proto.enable_read_bits_0 = 30
         config_proto.enable_read_bits_1 = 23
         self.SendProto("READ", config_proto)
+        logging.info("Sent configure.")
 
     def SendProto(self, name, proto):
       serialized = proto.SerializeToString()
@@ -98,10 +99,10 @@ class InputBoard(object):
                 last_pin_values = list(self.pin_values)
                 self.pin_values[0] = message.read_bits_0
                 self.pin_values[1] = message.read_bits_1
-                #if message.dist_cm < 500:
-                if message.dist_cm != 0.0:
-                    #logging.info("DIST CM = %.02f   ENCODER = %d", message.dist_cm, -42)#message.encoder_0_count)
-                    pass
+                if message.dist_cm < 500:
+                   if message.dist_cm != 0.0:
+                       #logging.info("DIST CM = %.02f   ENCODER = %d", message.dist_cm, -42)#message.encoder_0_count)
+                       pass
                 callbacks_to_delete = []
                 with self.write_mutex:
                     for pin, pin_callback in self.callbacks.iteritems():
@@ -123,20 +124,21 @@ class InputBoard(object):
             self.callbacks[pin] = PinCallback(pin, trigger_value, callback, permanent)
 
 
-#   read_proto = IOReadProto()
-#   read_proto.enable_read_bits_0 = 41
-#   read_proto.enable_read_bits_1 = 42
-#   read_proto.read_bits_0 = 43
-#   read_proto.read_bits_1 = 44
-#   logging.info("Message should be: %s", read_proto.SerializeToString())
-#   board = InputBoard()
-#   board.Start()
-#   while True:
-#       logging.info("P24=%d P25=%d P26=%d", board.GetPin(24), board.GetPin(25), board.GetPin(26))
-#       time.sleep(0.2)
-#   logging.info("Start loop")
-#   reader.Configure()
-#   logging.info("Start Read")
-#   while True:
-#       if reader.Read():
-#           break
+read_proto = IOReadProto()
+read_proto.enable_read_bits_0 = 41
+read_proto.enable_read_bits_1 = 42
+read_proto.read_bits_0 = 43
+read_proto.read_bits_1 = 44
+read_proto.dist_cm =42.42
+logging.info("Message should be: %s", read_proto.SerializeToString())
+board = InputBoard()
+board.Start()
+while True:
+    logging.info("P24=%d P25=%d P26=%d", board.GetPin(24), board.GetPin(25), board.GetPin(26))
+    time.sleep(0.2)
+logging.info("Start loop")
+reader.Configure()
+logging.info("Start Read")
+while True:
+    if reader.Read():
+        break
