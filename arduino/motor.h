@@ -7,7 +7,7 @@
 namespace armnyak {
 namespace {
 
-const float kSlowDownTime = 2.0;  // seconds
+const float kSlowDownTime = 4.0;  // seconds
 
 float SpeedToWaitTimeSeconds(const float steps_per_second) {
   return 1.0 / (steps_per_second + 1);
@@ -20,7 +20,7 @@ uint32_t SecondsToMicros(const float wait_seconds) {
 void UpdateSpeed(const float min_speed, const float max_speed, const float current_speed,
     const uint32_t steps_remaining, float *speed, volatile uint32_t *wait_micros) {
 
-  const float acceleration = max_speed / kSlowDownTime;
+  const float acceleration = max_speed;
   const float cooldown_steps =
       current_speed * kSlowDownTime - 0.5 * acceleration * kSlowDownTime * kSlowDownTime;
   if (current_speed > 1.1 * max_speed || cooldown_steps > steps_remaining) {
@@ -112,8 +112,7 @@ class Motor {
     uint32_t steps_remaining = StepsRemaining();
     UpdateSpeed(min_speed_, max_speed_, current_speed_steps_per_second_,
         steps_remaining, &current_speed_steps_per_second_, &current_wait_);
-    // Smoother than just incrementing last next_time by current wait, because it keeps the increments even.
-    next_step_in_usec_ = now + current_wait_;
+    next_step_in_usec_ += current_wait_;
     if (!can_update) {
       current_absolute_steps_ = target_absolute_steps_;
       steps_remaining = 0;
