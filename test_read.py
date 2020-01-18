@@ -21,6 +21,7 @@ while True:
     for i in range(22, 34, 2):
         s += " PIN %d = %d\n" % (i, board.GetPin(i))
 
+    print(s)
     logging.info("RPS = %f %s", board.ReadsPerSec(), s)
     time.sleep(0.2)
 #   logging.info("Start loop")

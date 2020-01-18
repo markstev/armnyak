@@ -45,8 +45,8 @@ class Hand(object):
     def Grab(self):
         self.motor_bank.left_grip.SetDisableAfterMoving(False)
         self.motor_bank.right_grip.SetDisableAfterMoving(False)
-        self.motor_bank.left_grip.MoveAbsolute(1.0, -self.grab_amount)
-        self.motor_bank.right_grip.MoveAbsolute(1.0, self.grab_amount)
+        self.motor_bank.left_grip.MoveAbsolute(0.2, -self.grab_amount)
+        self.motor_bank.right_grip.MoveAbsolute(0.2, self.grab_amount)
         def StopGrab():
             logging.info("Stop grab.")
             # Force stop

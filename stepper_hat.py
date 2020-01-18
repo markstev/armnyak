@@ -54,10 +54,11 @@ for i in range(1):
 
 bank = MotorBankBase(block_mode=True)
 forward = 1.0
-for i in range(1):
+for i in range(2):
   forward *= -1.0
   for name, motor in sorted(bank.named_motors.iteritems()):
-      #f name != "MOTOR_5":
+      if name != "left_grip":
+          continue
       # #WriteLCD(name)
       # #motor.MoveAbsolute(1.0, 0)
       # #time.sleep(1)

@@ -71,8 +71,6 @@ class Motor {
   }
 
   void Update(const MotorMoveProto &move_proto) {
-    min_speed_ = move_proto.min_speed;
-    max_speed_ = move_proto.max_speed;
     if (move_proto.use_absolute_steps) {
       target_absolute_steps_ = max(min_steps_, min(max_steps_, move_proto.absolute_steps));
     } else if (move_proto.max_speed == 0.0) {
@@ -84,6 +82,8 @@ class Motor {
         target_absolute_steps_ = max(min_steps_, min(max_steps_, -move_proto.steps + current_absolute_steps_));
       }
     }
+    min_speed_ = move_proto.min_speed;
+    max_speed_ = move_proto.max_speed;
     const float acceleration = max_speed_;
     if (move_proto.max_speed != 0.0) {
       UpdateSpeed(min_speed_, max_speed_, current_speed_steps_per_second_,

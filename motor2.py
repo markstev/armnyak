@@ -72,6 +72,7 @@ class Motor(object):
         return self.Move(move_proto)
 
   def Stop(self):
+      logging.info("%s Stop!", self.name)
       return self.MoveRelative(0.0)
 
   def MoveAbsolute(self, speed, world_radians):
@@ -251,12 +252,12 @@ class StepperBoardMotorMaps(object):
                     'left_grip',
                     arm_config.grip_gear_factor,
                     True,
-                    MotorPins(45, 44, 43)),
+                    MotorPins(42, 41, 40)),
                 MotorConf(
                     'right_grip',
                     arm_config.grip_gear_factor,
                     True,
-                    MotorPins(42, 41, 40)),
+                    MotorPins(45, 44, 43)),
                 # Expansion slots
                 #MotorPins(28, 29, 30),
                 #MotorPins(31, 32, 33),
@@ -275,7 +276,7 @@ class StepperBoardMotorMaps(object):
         """Returns a map from name to motor"""
         motors = {}
         for address, motor_config in enumerate(self.motors):
-            motor = Motor(interface, motor_config.gear_Factor,
+            motor = Motor(interface, motor_config.gear_factor,
                     hardware_direction=motor_config.hardware_direction,
                     init_proto=self.CreateInitProto(address, motor_config))
             name = motor_config.name
@@ -292,6 +293,7 @@ class StepperBoardMotorMaps(object):
         motor_init.ms0_pin = 0
         motor_init.ms1_pin = 0
         motor_init.ms2_pin = 0
+        return motor_init
 
 
 SB_MAP = StepperBoardMotorMaps()
@@ -320,12 +322,12 @@ class MotorBankBase(object):
     self.motors = self.named_motors.values()
     for name, motor in self.named_motors.iteritems():
         motor.Configure(microsteps=1, max_steps=60000, min_steps=-60000, name=name, set_zero=True)
-    self.base_motor = self.motors['base']
-    self.wrist_motor = self.motors['wrist']
-    self.lift_motor = self.motors['lift']
-    self.wrist_tilt_motor = self.motors['tilt']
-    self.left_grip = self.motors['left_grip']
-    self.right_grip = self.motors['right_grip']
+    self.base_motor = self.named_motors['base']
+    self.wrist_motor = self.named_motors['wrist']
+    self.lift_motor = self.named_motors['lift']
+    self.wrist_tilt_motor = self.named_motors['tilt']
+    self.left_grip = self.named_motors['left_grip']
+    self.right_grip = self.named_motors['right_grip']
 
   def Rezero(self):
     self.Release()
@@ -339,6 +341,10 @@ class MotorBankBase(object):
       motor.SetDisableAfterMoving(True)
 
   def WriteMany(self, move_protos, included_motor):
+      for move_proto in move_protos:
+        included_motor.Move(move_proto)
+      return
+      # TODO: Re-enable many motor mode
       if len(move_protos) != 3:
           logging.error("Bad call to write many")
       move_all_proto = MotorMoveAllProto()

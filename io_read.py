@@ -24,7 +24,7 @@ class Reader(object):
     def Reconnect(self):
         self.contiguous_errors = 0
         baud = 9600
-        device_basename = "ttyACM2"
+        device_basename = "ttyACM1"
         self.interface = serial_control.SerialInterface(device_basename, baud=baud)
 
     def Read(self):
@@ -124,21 +124,21 @@ class InputBoard(object):
             self.callbacks[pin] = PinCallback(pin, trigger_value, callback, permanent)
 
 
-read_proto = IOReadProto()
-read_proto.enable_read_bits_0 = 41
-read_proto.enable_read_bits_1 = 42
-read_proto.read_bits_0 = 43
-read_proto.read_bits_1 = 44
-read_proto.dist_cm =42.42
-logging.info("Message should be: %s", read_proto.SerializeToString())
-board = InputBoard()
-board.Start()
-while True:
-    logging.info("P24=%d P25=%d P26=%d", board.GetPin(24), board.GetPin(25), board.GetPin(26))
-    time.sleep(0.2)
-logging.info("Start loop")
-reader.Configure()
-logging.info("Start Read")
-while True:
-    if reader.Read():
-        break
+#   read_proto = IOReadProto()
+#   read_proto.enable_read_bits_0 = 41
+#   read_proto.enable_read_bits_1 = 42
+#   read_proto.read_bits_0 = 43
+#   read_proto.read_bits_1 = 44
+#   read_proto.dist_cm =42.42
+#   logging.info("Message should be: %s", read_proto.SerializeToString())
+#   board = InputBoard()
+#   board.Start()
+#   while True:
+#       logging.info("P24=%d P25=%d P26=%d", board.GetPin(24), board.GetPin(25), board.GetPin(26))
+#       time.sleep(0.2)
+#   logging.info("Start loop")
+#   reader.Configure()
+#   logging.info("Start Read")
+#   while True:
+#       if reader.Read():
+#           break
